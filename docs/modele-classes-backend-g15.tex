@@ -1,0 +1,386 @@
+% !TEX TS-program = pdflatex
+% Document LaTeX — Modèle de classes backend
+
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{xcolor}
+
+\geometry{margin=2.5cm}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue,
+  citecolor=black
+}
+
+\setlist[itemize]{noitemsep, topsep=4pt}
+\setlist[description]{style=nextline, noitemsep, topsep=4pt}
+
+\title{Projet transversal (MIF10) — Groupe 15\\\vspace{0.2cm}Modèle de classes du backend}
+\author{Groupe 15}
+\date{18 mars 2026}
+
+\begin{document}
+\maketitle
+
+\section{Contexte et objectifs}
+Le projet vise la réalisation d’une application web de gestion d’évènements participatifs (type \textit{Meetup}) centrée sur des évènements caritatifs autour du cinéma.
+
+Les fonctionnalités attendues côté backend incluent :
+\begin{itemize}
+  \item consultation, recherche et filtrage des évènements (visiteurs) ;
+  \item création de compte, authentification, favoris, inscriptions et commentaires (utilisateurs connectés) ;
+  \item demande de création d’association (utilisateurs connectés) ;
+  \item création, publication, modification, annulation d’évènements et gestion d’illustrations (utilisateurs rattachés à une association) ;
+  \item consultation de la liste des inscrits à un évènement (association).
+\end{itemize}
+
+\section{Hypothèses et décisions de modélisation}
+\begin{itemize}
+  \item \textbf{Pas de notion d’admin dédiée} : un utilisateur « éditeur » est un utilisateur rattaché à une \texttt{Association}.
+  \item La publication est gérée par un \textbf{statut} \texttt{DRAFT/PUBLISHED/CANCELLED}.
+  \item L’annulation ne déclenche pas de notification automatique aux participants (simple changement de statut visible côté UI).
+  \item Un utilisateur peut avoir \textbf{au plus un commentaire par évènement} (cohérent avec « modifier mon commentaire »).
+  \item Un utilisateur est rattaché à \textbf{au plus une association} (cardinalité 0..1).
+  \item Les utilisateurs peuvent faire une \textbf{demande de création d’association} (workflow \texttt{PENDING/APPROVED/REJECTED}).
+  \item Les évènements ont des \textbf{catégories hiérarchiques} (catégorie parent / catégories enfants).
+\end{itemize}
+
+\section{Glossaire (types et conventions)}
+\begin{description}
+  \item[\texttt{UUID}] Identifiant unique (stockage DB : \texttt{uuid} ou \texttt{char/varchar}).
+  \item[\texttt{datetime}] Date/heure (stockage DB : \texttt{timestamp} avec fuseau conseillé).
+  \item[\texttt{text}] Chaîne potentiellement longue.
+\end{description}
+
+\section{Énumérations et objets valeur}
+\subsection{\texttt{EventStatus}}
+\begin{itemize}
+  \item \texttt{DRAFT} : évènement non visible publiquement.
+  \item \texttt{PUBLISHED} : évènement visible publiquement.
+  \item \texttt{CANCELLED} : évènement visible publiquement, marqué comme annulé.
+\end{itemize}
+
+\subsection{\texttt{AssociationRequestStatus}}
+\begin{itemize}
+  \item \texttt{PENDING} : demande en attente de traitement.
+  \item \texttt{APPROVED} : demande acceptée (création d’une association).
+  \item \texttt{REJECTED} : demande refusée (motif optionnel).
+\end{itemize}
+
+\subsection{\texttt{Location} (objet valeur)}
+La localisation d’un évènement est modélisée comme un objet valeur (ou des colonnes directement dans \texttt{Event}).
+Champs suggérés : \texttt{name}, \texttt{addressLine1}, \texttt{postalCode}, \texttt{city}, \texttt{country}, \texttt{lat}, \texttt{lng} (optionnels).
+
+\section{Modèle de domaine (vue d’ensemble)}
+\subsection{Entités}
+\begin{itemize}
+  \item \texttt{User} : compte utilisateur.
+  \item \texttt{Association} : organisation qui publie les évènements.
+  \item \texttt{AssociationRequest} : demande de création d’association.
+  \item \texttt{Event} : évènement caritatif (projection/activité autour d’un film).
+  \item \texttt{EventImage} : image d’illustration d’un évènement.
+  \item \texttt{Favorite} : favori d’un utilisateur sur un évènement.
+  \item \texttt{Signup} : participation/inscription d’un utilisateur à un évènement.
+  \item \texttt{Comment} : commentaire d’un utilisateur sur un évènement.
+  \item \texttt{EventCategory} : catégorie (hiérarchique).
+  \item \texttt{EventCategoryLink} : association évènement--catégorie.
+\end{itemize}
+
+\subsection{Relations principales}
+\begin{itemize}
+  \item Une \texttt{Association} possède plusieurs \texttt{User} (membres/éditeurs).
+  \item Une \texttt{Association} publie plusieurs \texttt{Event}.
+  \item Un \texttt{Event} possède plusieurs \texttt{EventImage}.
+  \item \texttt{Favorite}, \texttt{Signup} et \texttt{Comment} sont des relations entre \texttt{User} et \texttt{Event}.
+  \item Les catégories sont hiérarchiques : une \texttt{EventCategory} peut avoir un parent et plusieurs enfants.
+\end{itemize}
+
+\section{Spécification des classes / tables}
+Les sections suivantes décrivent les champs, les contraintes et les règles de gestion.
+
+\subsection{\texttt{User}}
+\textbf{Rôle métier} : utilisateur connecté (peut liker, s’inscrire, commenter). S’il est rattaché à une association, il peut également gérer des évènements.
+
+\begin{longtable}{@{}p{0.28\textwidth}p{0.18\textwidth}p{0.46\textwidth}@{}}
+\toprule
+\textbf{Champ} & \textbf{Type} & \textbf{Contraintes / remarques}\\
+\midrule
+\endhead
+\texttt{id} & UUID & Clé primaire.\\
+\texttt{email} & string & Unique, format email.\\
+\texttt{passwordHash} & string & Hash (jamais le mot de passe en clair).\\
+\texttt{displayName} & string & Nom affiché.\\
+\texttt{hasAssociation} & boolean & Vrai si l’utilisateur est rattaché à une association.\\
+\texttt{associationId} & UUID? & Nullable ; non-null si \texttt{hasAssociation=true}.\\
+\texttt{createdAt} & datetime & Audit.\\
+\texttt{updatedAt} & datetime & Audit.\\
+\texttt{disabledAt} & datetime? & Optionnel (désactivation).\\
+\bottomrule
+\end{longtable}
+
+\textbf{Contraintes clés}
+\begin{itemize}
+  \item \texttt{email} unique.
+  \item Cohérence : \texttt{hasAssociation=true} $\Rightarrow$ \texttt{associationId} non-null.
+\end{itemize}
+
+\subsection{\texttt{Association}}
+\textbf{Rôle métier} : entité porteuse des évènements (publication et promotion).
+
+\begin{longtable}{@{}p{0.28\textwidth}p{0.18\textwidth}p{0.46\textwidth}@{}}
+\toprule
+\textbf{Champ} & \textbf{Type} & \textbf{Contraintes / remarques}\\
+\midrule
+\endhead
+\texttt{id} & UUID & Clé primaire.\\
+\texttt{name} & string & Nom officiel.\\
+\texttt{description} & text? & Optionnel.\\
+\texttt{websiteUrl} & string? & Optionnel.\\
+\texttt{logoUrl} & string? & Optionnel.\\
+\texttt{createdAt} & datetime & Audit.\\
+\texttt{updatedAt} & datetime & Audit.\\
+\bottomrule
+\end{longtable}
+
+\subsection{\texttt{AssociationRequest}}
+\textbf{Rôle métier} : demande d’un utilisateur pour créer une association.
+
+\begin{longtable}{@{}p{0.28\textwidth}p{0.18\textwidth}p{0.46\textwidth}@{}}
+\toprule
+\textbf{Champ} & \textbf{Type} & \textbf{Contraintes / remarques}\\
+\midrule
+\endhead
+\texttt{id} & UUID & Clé primaire.\\
+\texttt{requestedByUserId} & UUID & FK vers \texttt{User}.\\
+\texttt{name} & string & Nom proposé.\\
+\texttt{description} & text? & Optionnel.\\
+\texttt{websiteUrl} & string? & Optionnel.\\
+\texttt{status} & AssociationRequestStatus & \texttt{PENDING|APPROVED|REJECTED}.\\
+\texttt{reviewedAt} & datetime? & Optionnel.\\
+\texttt{reviewNote} & string? & Optionnel (motif).\\
+\texttt{createdAt} & datetime & Audit.\\
+\texttt{updatedAt} & datetime & Audit.\\
+\bottomrule
+\end{longtable}
+
+\textbf{Contraintes}
+\begin{itemize}
+  \item Recommandé : un utilisateur ne peut avoir qu’une demande \texttt{PENDING} à la fois.
+  \item À l’approbation : création d’une \texttt{Association} et rattachement du \texttt{User} demandeur.
+\end{itemize}
+
+\subsection{\texttt{Event}}
+\textbf{Rôle métier} : évènement caritatif autour d’un film.
+
+\begin{longtable}{@{}p{0.28\textwidth}p{0.18\textwidth}p{0.46\textwidth}@{}}
+\toprule
+\textbf{Champ} & \textbf{Type} & \textbf{Contraintes / remarques}\\
+\midrule
+\endhead
+\texttt{id} & UUID & Clé primaire.\\
+\texttt{title} & string & Titre affiché de l’évènement.\\
+\texttt{movieTitle} & string & Supporte la recherche « nom du film ».\\
+\texttt{description} & text & Description détaillée.\\
+\texttt{startsAt} & datetime & Date/heure de début.\\
+\texttt{endsAt} & datetime? & Optionnel.\\
+\texttt{location} & Location & Objet valeur (ou colonnes).\\
+\texttt{capacity} & int? & Optionnel ; si null, capacité illimitée.\\
+\texttt{status} & EventStatus & \texttt{DRAFT|PUBLISHED|CANCELLED}.\\
+\texttt{cancelReason} & string? & Optionnel ; utile si annulé.\\
+\texttt{associationId} & UUID & Association qui publie l’évènement.\\
+\texttt{createdByUserId} & UUID & Doit référencer un utilisateur rattaché à une association.\\
+\texttt{publishedAt} & datetime? & Défini lors de la publication.\\
+\texttt{createdAt} & datetime & Audit.\\
+\texttt{updatedAt} & datetime & Audit.\\
+\bottomrule
+\end{longtable}
+
+\textbf{Règles métier}
+\begin{itemize}
+  \item Visibilité publique : \texttt{status \in \{PUBLISHED, CANCELLED\}}.
+  \item Publication : \texttt{DRAFT \to PUBLISHED} (renseigne \texttt{publishedAt}).
+  \item Annulation : \texttt{PUBLISHED \to CANCELLED} (optionnellement renseigne \texttt{cancelReason}).
+  \item Autorisation : seuls les utilisateurs rattachés à une association peuvent créer/publier/modifier/annuler.
+  \item Capacité : si \texttt{capacity} est définie, le nombre de \texttt{Signup} ne doit pas dépasser \texttt{capacity}.
+\end{itemize}
+
+\subsection{\texttt{EventImage}}
+\textbf{Rôle métier} : illustration d’un évènement.
+
+\begin{longtable}{@{}p{0.28\textwidth}p{0.18\textwidth}p{0.46\textwidth}@{}}
+\toprule
+\textbf{Champ} & \textbf{Type} & \textbf{Contraintes / remarques}\\
+\midrule
+\endhead
+\texttt{id} & UUID & Clé primaire.\\
+\texttt{eventId} & UUID & FK vers \texttt{Event}.\\
+\texttt{url} & string & URL publique ou clé de stockage.\\
+\texttt{altText} & string? & Optionnel.\\
+\texttt{position} & int & Ordre d’affichage.\\
+\texttt{createdAt} & datetime & Audit.\\
+\bottomrule
+\end{longtable}
+
+\textbf{Contraintes}
+\begin{itemize}
+  \item \texttt{(eventId, position)} unique (recommandé).
+\end{itemize}
+
+\subsection{\texttt{Favorite}}
+\textbf{Rôle métier} : favori d’un utilisateur sur un évènement.
+
+\begin{longtable}{@{}p{0.28\textwidth}p{0.18\textwidth}p{0.46\textwidth}@{}}
+\toprule
+\textbf{Champ} & \textbf{Type} & \textbf{Contraintes / remarques}\\
+\midrule
+\endhead
+\texttt{id} & UUID & Clé primaire.\\
+\texttt{userId} & UUID & FK vers \texttt{User}.\\
+\texttt{eventId} & UUID & FK vers \texttt{Event}.\\
+\texttt{createdAt} & datetime & Audit.\\
+\bottomrule
+\end{longtable}
+
+\textbf{Contraintes}
+\begin{itemize}
+  \item Unicité : \texttt{(userId, eventId)} unique.
+  \item Autorisé uniquement pour un utilisateur authentifié.
+\end{itemize}
+
+\subsection{\texttt{Signup}}
+\textbf{Rôle métier} : inscription/participation à un évènement.
+
+\begin{longtable}{@{}p{0.28\textwidth}p{0.18\textwidth}p{0.46\textwidth}@{}}
+\toprule
+\textbf{Champ} & \textbf{Type} & \textbf{Contraintes / remarques}\\
+\midrule
+\endhead
+\texttt{id} & UUID & Clé primaire.\\
+\texttt{userId} & UUID & FK vers \texttt{User}.\\
+\texttt{eventId} & UUID & FK vers \texttt{Event}.\\
+\texttt{createdAt} & datetime & Audit.\\
+\bottomrule
+\end{longtable}
+
+\textbf{Contraintes}
+\begin{itemize}
+  \item Unicité : \texttt{(userId, eventId)} unique.
+  \item Autorisé uniquement si \texttt{Event.status = PUBLISHED}.
+  \item Si \texttt{capacity} est définie, refuser l’inscription lorsque l’évènement est complet.
+\end{itemize}
+
+\subsection{\texttt{Comment}}
+\textbf{Rôle métier} : commentaire d’un utilisateur sur un évènement.
+
+\begin{longtable}{@{}p{0.28\textwidth}p{0.18\textwidth}p{0.46\textwidth}@{}}
+\toprule
+\textbf{Champ} & \textbf{Type} & \textbf{Contraintes / remarques}\\
+\midrule
+\endhead
+\texttt{id} & UUID & Clé primaire.\\
+\texttt{userId} & UUID & FK vers \texttt{User}.\\
+\texttt{eventId} & UUID & FK vers \texttt{Event}.\\
+\texttt{body} & text & Contenu du commentaire.\\
+\texttt{createdAt} & datetime & Audit.\\
+\texttt{updatedAt} & datetime & Audit.\\
+\texttt{deletedAt} & datetime? & Optionnel (soft delete).\\
+\bottomrule
+\end{longtable}
+
+\textbf{Contraintes}
+\begin{itemize}
+  \item Recommandé : \texttt{(userId, eventId)} unique (un commentaire par évènement et par utilisateur).
+  \item Modification/suppression : par l’auteur (et optionnellement par un utilisateur d’association si vous décidez une modération).
+\end{itemize}
+
+\subsection{\texttt{EventCategory}}
+\textbf{Rôle métier} : classification des évènements, sous forme hiérarchique (parent/enfants).
+
+\begin{longtable}{@{}p{0.28\textwidth}p{0.18\textwidth}p{0.46\textwidth}@{}}
+\toprule
+\textbf{Champ} & \textbf{Type} & \textbf{Contraintes / remarques}\\
+\midrule
+\endhead
+\texttt{id} & UUID & Clé primaire.\\
+\texttt{name} & string & Nom lisible.\\
+\texttt{slug} & string & Unique, pratique pour URLs.\\
+\texttt{parentId} & UUID? & FK vers \texttt{EventCategory}, nullable.\\
+\texttt{createdAt} & datetime & Audit.\\
+\texttt{updatedAt} & datetime & Audit.\\
+\bottomrule
+\end{longtable}
+
+\textbf{Contraintes}
+\begin{itemize}
+  \item \texttt{parentId} nullable pour les catégories racines.
+  \item Éviter les cycles (contrainte applicative).
+\end{itemize}
+
+\subsection{\texttt{EventCategoryLink}}
+\textbf{Rôle métier} : associer un évènement à une ou plusieurs catégories.
+
+\begin{longtable}{@{}p{0.28\textwidth}p{0.18\textwidth}p{0.46\textwidth}@{}}
+\toprule
+\textbf{Champ} & \textbf{Type} & \textbf{Contraintes / remarques}\\
+\midrule
+\endhead
+\texttt{id} & UUID & Clé primaire.\\
+\texttt{eventId} & UUID & FK vers \texttt{Event}.\\
+\texttt{categoryId} & UUID & FK vers \texttt{EventCategory}.\\
+\texttt{createdAt} & datetime & Audit.\\
+\bottomrule
+\end{longtable}
+
+\textbf{Contraintes}
+\begin{itemize}
+  \item Unicité : \texttt{(eventId, categoryId)} unique.
+  \item Option : imposer une seule catégorie par évènement via contrainte unique sur \texttt{eventId}.
+\end{itemize}
+
+\section{Vues / requêtes utiles (implémentation)}
+\subsection{Dashboard utilisateur}
+\begin{itemize}
+  \item \textbf{Favoris} : événements joints avec \texttt{Favorite} filtrés par \texttt{userId} (exclure les \texttt{DRAFT}).
+  \item \textbf{Participations} : événements joints avec \texttt{Signup} filtrés par \texttt{userId}.
+\end{itemize}
+
+\subsection{Liste des inscrits à un évènement (association)}
+\begin{itemize}
+  \item Pour un \texttt{eventId}, lister les \texttt{User} joints avec \texttt{Signup}.
+\end{itemize}
+
+\section{Recherche et filtrage (visiteur)}
+\subsection{Critères minimum}
+\begin{itemize}
+  \item Recherche « film » : sur \texttt{Event.movieTitle}.
+  \item Filtre date : intervalle \texttt{[from, to]} sur \texttt{Event.startsAt}.
+  \item Filtre lieu : au minimum \texttt{city} (option : code postal).
+  \item Filtre catégorie : par catégorie (option : inclure les sous-catégories).
+  \item Visibilité : \texttt{status \in \{PUBLISHED, CANCELLED\}}.
+\end{itemize}
+
+\subsection{Index recommandés (base de données)}
+\begin{itemize}
+  \item \texttt{Event(status, startsAt)}
+  \item \texttt{Event(movieTitle)} (ou index full-text)
+  \item \texttt{Event(city)} si la ville est stockée en colonne
+  \item \texttt{Favorite(userId, eventId)} unique
+  \item \texttt{Signup(userId, eventId)} unique
+  \item \texttt{Comment(userId, eventId)} unique (si contrainte activée)
+  \item \texttt{EventCategory(slug)} unique
+  \item \texttt{EventCategory(parentId)}
+  \item \texttt{EventCategoryLink(eventId, categoryId)} unique
+  \item \texttt{AssociationRequest(requestedByUserId, status)}
+\end{itemize}
+
+\end{document}
