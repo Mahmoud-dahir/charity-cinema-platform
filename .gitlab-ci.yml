@@ -58,3 +58,4 @@ deploy_to_vm:
     - main
   needs: 
     - sonarqube-check
+
