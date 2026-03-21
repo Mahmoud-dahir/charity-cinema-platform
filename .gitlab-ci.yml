@@ -50,7 +50,7 @@ deploy_to_vm:
     - apk add --no-cache openssh-client bash
     - mkdir -p ~/.ssh
     - eval $(ssh-agent -s)
-    - echo "$SSH_PRIVATE_KEY" | tr -d '\\r' | ssh-add -
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
     - ssh-keyscan 192.168.75.115 >> ~/.ssh/known_hosts
   script:
     - ssh p2211469@192.168.75.115 "cd /home/p2211469/mif10-projet-transversal-de-master-informatique-2025-2026-g15 && git pull origin main && source ~/.nvm/nvm.sh && pm2 restart all"
