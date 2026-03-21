@@ -2,7 +2,7 @@ stages:
   - sonarqube-check
   - sonarqube-vulnerability-report
   - deploy
-
+ 
 sonarqube-check:
   stage: sonarqube-check
   image:
@@ -23,7 +23,7 @@ sonarqube-check:
     - master
     - main
     - develop
-
+ 
 sonarqube-vulnerability-report:
   stage: sonarqube-vulnerability-report
   image: alpine:latest
@@ -37,7 +37,7 @@ sonarqube-vulnerability-report:
   allow_failure: true
   only:
     - main
-
+ 
 deploy_to_vm:
   stage: deploy
   image: alpine:latest
@@ -45,7 +45,7 @@ deploy_to_vm:
     - apk add --no-cache openssh-client bash
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
-    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+    - printf "%s\n" "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
     - chmod 600 ~/.ssh/id_rsa
     - ssh-keyscan 192.168.75.115 >> ~/.ssh/known_hosts
   script:
