@@ -3,7 +3,6 @@ stages:
   - sonarqube-vulnerability-report
   - deploy
 
-# SONARQUBE 
 sonarqube-check:
   stage: sonarqube-check
   image: 
@@ -25,16 +24,18 @@ sonarqube-check:
     - main
     - develop
 
+# CORRIGÉ : Image avec curl + before_script
 sonarqube-vulnerability-report:
   stage: sonarqube-vulnerability-report
+  image: alpine:latest  # ← Image avec curl
+  before_script:
+    - apk add --no-cache curl
   script:
     - 'curl -u "${SONAR_TOKEN}:" "${SONAR_HOST_URL}/api/issues/gitlab_sast_export?projectKey=mif10-projet-transversal-de-master-informatique-2025-2026-g15_mif10-projet-transversal-de-master-informatique-2025-2026-g15_AZ0QifQypItf3KCWeGyX&branch=${CI_COMMIT_BRANCH}&pullRequest=${CI_MERGE_REQUEST_IID}" -o gl-sast-sonar-report.json'
   allow_failure: true
   only:
     - merge_requests
-    - master
     - main
-    - develop
   artifacts:
     expire_in: 1 day
     reports:
@@ -42,7 +43,6 @@ sonarqube-vulnerability-report:
   dependencies:
     - sonarqube-check
 
-# DÉPLOIEMENT PM2
 deploy_to_vm:
   stage: deploy
   image: alpine:latest
@@ -53,8 +53,8 @@ deploy_to_vm:
     - echo "$SSH_PRIVATE_KEY" | tr -d '\\r' | ssh-add -
     - ssh-keyscan 192.168.75.115 >> ~/.ssh/known_hosts
   script:
-    - ssh p2211469@192.168.75.115 "cd /home/p2211469/mif10-projet-transversal-de-master-informatique-2025-2026-g15 && git pull origin main && source ~/.nvm/nvm.sh && pm2 restart all" 
+    - ssh p2211469@192.168.75.115 "cd /home/p2211469/mif10-projet-transversal-de-master-informatique-2025-2026-g15 && git pull origin main && source ~/.nvm/nvm.sh && pm2 restart all"
   only:
     - main
   needs: 
-    - sonarqube-check  
+    - sonarqube-check
