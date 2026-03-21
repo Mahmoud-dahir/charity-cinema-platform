@@ -2,7 +2,7 @@ stages:
   - sonarqube-check
   - sonarqube-vulnerability-report
   - deploy
- 
+
 sonarqube-check:
   stage: sonarqube-check
   image:
@@ -23,7 +23,7 @@ sonarqube-check:
     - master
     - main
     - develop
- 
+
 sonarqube-vulnerability-report:
   stage: sonarqube-vulnerability-report
   image: alpine:latest
@@ -37,7 +37,7 @@ sonarqube-vulnerability-report:
   allow_failure: true
   only:
     - main
- 
+
 deploy_to_vm:
   stage: deploy
   image: alpine:latest
@@ -45,10 +45,9 @@ deploy_to_vm:
     - apk add --no-cache openssh-client bash
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
-    - printf "%s\n" "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-    - chmod 600 ~/.ssh/id_rsa
+    - chmod 600 "$SSH_PRIVATE_KEY"
     - ssh-keyscan 192.168.75.115 >> ~/.ssh/known_hosts
   script:
-    - ssh p2211469@192.168.75.115 "cd /home/p2211469/mif10-projet-transversal-de-master-informatique-2025-2026-g15 && git pull origin main && source ~/.nvm/nvm.sh && pm2 restart all"
+    - ssh -i "$SSH_PRIVATE_KEY" p2211469@192.168.75.115 "cd /home/p2211469/mif10-projet-transversal-de-master-informatique-2025-2026-g15 && git pull origin main && source ~/.nvm/nvm.sh && pm2 restart all"
   only:
     - main
