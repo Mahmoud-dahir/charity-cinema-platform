@@ -39,6 +39,9 @@ sonarqube-check:
     key: "${CI_JOB_NAME}"
     paths:
       - .sonar/cache
+  dependencies:
+    - test-backend
+    - test-frontend
   script:
     - sonar-scanner
   allow_failure: true
