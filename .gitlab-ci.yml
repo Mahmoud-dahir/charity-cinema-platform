@@ -6,12 +6,10 @@ stages:
 
 test-backend:
   stage: test
-  image: python:3.12
+  image: python:3.11-slim
   script:
-    - cd backend
-    - pip install -r requirements.txt
-    - coverage run manage.py test api
-    - coverage xml
+    - pip install -r backend/requirements.txt pytest pytest-cov pytest-django
+    - pytest backend/ --cov=backend --cov-report=xml:backend/coverage.xml
   artifacts:
     paths:
       - backend/coverage.xml
