@@ -1,7 +1,31 @@
 stages:
+  - test
   - sonarqube-check
   - sonarqube-vulnerability-report
   - deploy
+
+test-backend:
+  stage: test
+  image: python:3.12
+  script:
+    - cd backend
+    - pip install -r requirements.txt
+    - coverage run manage.py test api
+    - coverage xml
+  artifacts:
+    paths:
+      - backend/coverage.xml
+
+test-frontend:
+  stage: test
+  image: node:20
+  script:
+    - cd frontend
+    - npm ci || npm install
+    - npm run test
+  artifacts:
+    paths:
+      - frontend/coverage/lcov.info
 
 sonarqube-check:
   stage: sonarqube-check
