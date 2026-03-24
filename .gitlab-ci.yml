@@ -9,10 +9,12 @@ test-backend:
   image: python:3.11-slim
   script:
     - pip install -r backend/requirements.txt pytest pytest-cov pytest-django
-    - pytest backend/ --cov=backend --cov-report=xml:backend/coverage.xml
+    - cd backend
+    - pytest --cov=. --cov-report=xml:coverage.xml
   artifacts:
     paths:
       - backend/coverage.xml
+    expire_in: 1 hour
 
 test-frontend:
   stage: test
@@ -20,10 +22,11 @@ test-frontend:
   script:
     - cd frontend
     - npm ci || npm install
-    - npm run test
+    - npm test -- --coverage --watchAll=false
   artifacts:
     paths:
       - frontend/coverage/lcov.info
+    expire_in: 1 hour
 
 sonarqube-check:
   stage: sonarqube-check
@@ -73,6 +76,6 @@ deploy_to_vm:
     - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
     - ssh-keyscan 192.168.75.115 >> ~/.ssh/known_hosts
   script:
-    - ssh p2211469@192.168.75.115 "cd /home/p2211469/mif10-projet-transversal-de-master-informatique-2025-2026-g15 && git pull origin main && source ~/.nvm/nvm.sh && cd backend && { [ -d venv ] && source venv/bin/activate || true; } && pip install -r requirements.txt && python manage.py makemigrations api && python manage.py migrate && cd ../frontend && npm install && npm run build && cd .. && pm2 restart all"
+    - ssh p2211469@192.168.75.115 "cd /home/p2211469/mif10-projet-transversal-de-master-informatique-2025-2026-g15 && git pull origin main && source ~/.nvm/nvm.sh && cd backend && { [ -d venv ] && source venv/bin/activate || true; } && pip install -r requirements.txt && python manage.py makemigrations api && python manage.py migrate && cd ../frontend && npm install && npm run build && pm2 restart all"
   only:
     - main
