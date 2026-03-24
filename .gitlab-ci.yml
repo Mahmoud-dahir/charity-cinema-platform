@@ -91,18 +91,22 @@ deploy_to_vm:
         cd /home/p2211469/mif10-projet-transversal-de-master-informatique-2025-2026-g15 && \
         git pull origin main && \
         
+        pm2 stop all || true && \
+        
         cd backend && \
         python3 -m venv venv && \
-        ./venv/bin/pip install --upgrade pip && \
         ./venv/bin/pip install -r requirements.txt && \
         ./venv/bin/python manage.py migrate && \
         
         cd ../frontend && \
         source ~/.nvm/nvm.sh && \
+        rm -rf .next && \
         npm install && \
+        
+        export NODE_OPTIONS='--max-old-space-size=1024' && \
         npm run build && \
         
-        pm2 restart all
+        pm2 restart all || pm2 start ecosystem.config.js
       "
   only:
     - main
