@@ -88,6 +88,9 @@ deploy_to_vm:
   script:
     - |
       ssh p2211469@192.168.75.115 "
+        export NVM_DIR='\$HOME/.nvm'
+        [ -s '\$NVM_DIR/nvm.sh' ] && . '\$NVM_DIR/nvm.sh'
+        
         cd /home/p2211469/mif10-projet-transversal-de-master-informatique-2025-2026-g15 && \
         git pull origin main && \
         
@@ -99,14 +102,13 @@ deploy_to_vm:
         ./venv/bin/python manage.py migrate && \
         
         cd ../frontend && \
-        source ~/.nvm/nvm.sh && \
         rm -rf .next && \
         npm install && \
         
-        export NODE_OPTIONS='--max-old-space-size=1024' && \
+        export NODE_OPTIONS='--max-old-space-size=512' && \
         npm run build && \
         
-        pm2 restart all || pm2 start ecosystem.config.js
+        pm2 restart all || echo 'PM2 restart failed, please start processes manually once'
       "
   only:
     - main
