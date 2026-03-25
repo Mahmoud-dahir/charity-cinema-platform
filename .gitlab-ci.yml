@@ -75,7 +75,6 @@ sonarqube-vulnerability-report:
   allow_failure: true
   only:
     - main
-
 deploy_to_vm:
   stage: deploy
   image: alpine:latest
@@ -87,28 +86,31 @@ deploy_to_vm:
     - ssh-keyscan 192.168.75.115 >> ~/.ssh/known_hosts
   script:
     - |
-      ssh p2211469@192.168.75.115 "
+      ssh gitlabci@192.168.75.115 "
         export NVM_DIR='\$HOME/.nvm'
         [ -s '\$NVM_DIR/nvm.sh' ] && . '\$NVM_DIR/nvm.sh'
         
-        cd /home/p2211469/mif10-projet-transversal-de-master-informatique-2025-2026-g15 && \
+        # Aller dans le dossier de l'utilisateur gitlabci
+        cd /home/gitlabci/mif10-projet-transversal-de-master-informatique-2025-2026-g15 && \
         git pull origin main && \
         
-        pm2 stop all || true && \
-        
+        # Backend : Installation et Migration
         cd backend && \
         python3 -m venv venv && \
         ./venv/bin/pip install -r requirements.txt && \
         ./venv/bin/python manage.py migrate && \
         
+        # Frontend : Build
         cd ../frontend && \
-        rm -rf .next && \
         npm install && \
-        
         export NODE_OPTIONS='--max-old-space-size=512' && \
         npm run build && \
         
-        pm2 restart all || echo 'PM2 restart failed, please start processes manually once'
+        # Relance avec PM2 sur des ports spécifiques
+        # Backend sur 8000, Frontend sur 3000 par exemple
+        pm2 delete all || true && \
+        pm2 start ./venv/bin/python --name 'backend' -- manage.py runserver 0.0.0.0:8000 && \
+        pm2 start npm --name 'frontend' -- start -- -p 3000
       "
   only:
     - main
