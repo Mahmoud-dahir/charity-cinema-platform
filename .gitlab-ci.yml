@@ -75,6 +75,8 @@ sonarqube-vulnerability-report:
   allow_failure: true
   only:
     - main
+
+
 deploy_to_vm:
   stage: deploy
   image: alpine:latest
@@ -87,38 +89,31 @@ deploy_to_vm:
   script:
     - |
       ssh gitlabci@192.168.75.115 "
-        # 1. Chargement de l'environnement (NVM + PATH pour PM2)
-        export NVM_DIR='\$HOME/.nvm'
-        [ -s '\$NVM_DIR/nvm.sh' ] && . '\$NVM_DIR/nvm.sh'
-        export PATH=\$PATH:\$(npm config get prefix)/bin
-
-        # 2. Gestion du répertoire
-        PROJECT_DIR='\$HOME/mif10-projet-transversal-de-master-informatique-2025-2026-g15'
+        # Charger l'environnement Node/NVM
+        export NVM_DIR=\"\$HOME/.nvm\"
+        [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\"
         
+        # Aller dans le projet (ou le cloner si besoin)
+        PROJECT_DIR=\"\$HOME/mif10-projet-transversal-de-master-informatique-2025-2026-g15\"
         if [ ! -d \"\$PROJECT_DIR\" ]; then
-          echo 'Le dossier n existe pas, clonage en cours...'
-          # Utilisation du token SSH pour cloner sans mot de passe si configuré, 
-          # ou via HTTPS (attention si le repo est privé)
           git clone https://forge.univ-lyon1.fr/mif10-projet-transversal-de-master-informatique-2025-2026-g15/mif10-projet-transversal-de-master-informatique-2025-2026-g15.git \"\$PROJECT_DIR\"
         fi
         
         cd \"\$PROJECT_DIR\"
-        git fetch origin main
-        git reset --hard origin/main
+        git fetch origin main && git reset --hard origin/main
         
-        # 3. Backend (Venv + Migrations)
+        # Backend : Venv + Pip + Migrate
         cd backend
         python3 -m venv venv
         ./venv/bin/pip install -r requirements.txt
         ./venv/bin/python manage.py migrate
         
-        # 4. Frontend (Build)
+        # Frontend : Build
         cd ../frontend
         npm install
-        export NODE_OPTIONS='--max-old-space-size=512'
         npm run build
         
-        # 5. Déploiement PM2
+        # Relance avec PM2
         pm2 delete all || true
         pm2 start ./venv/bin/python --name 'backend' -- manage.py runserver 0.0.0.0:8000
         pm2 start npm --name 'frontend' -- start -- -p 3000
