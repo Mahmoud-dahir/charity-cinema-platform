@@ -134,7 +134,7 @@ deploy_to_vm:
         # 5. Frontend (Installation légère + Build)
         cd \"\$PROJECT_DIR/frontend\" || { echo 'Erreur: Dossier frontend introuvable'; exit 1; }
         # --omit=dev évite d'installer les outils de test lourds (Jest, etc.)
-        npm install --omit=dev --no-audit --no-fund --prefer-offline
+        npm install typescript --save-prod && npm install --omit=dev --no-audit --no-fund --prefer-offline
         npm run build
 
         # 6. Relance PM2 avec dossiers de travail propres
