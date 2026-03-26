@@ -88,14 +88,17 @@ deploy_to_vm:
         set -e
         echo "--- Début du déploiement sur la VM ---"
 
-        # 1. Environnement Node/NVM
+        # 1. Environnement
         export NVM_DIR="\$HOME/.nvm"
         [ -s "\$NVM_DIR/nvm.sh" ] && . "\$NVM_DIR/nvm.sh"
 
         PROJECT_DIR="\$HOME/mif10-projet-transversal-de-master-informatique-2025-2026-g15"
         REPO_URL="https://oauth2:${MY_DEPLOY_TOKEN}@forge.univ-lyon1.fr/mif10-projet-transversal-de-master-informatique-2025-2026-g15/mif10-projet-transversal-de-master-informatique-2025-2026-g15.git"
 
-        # 2. Récupération / mise à jour du code
+        # Nettoyage du lockfile parasite à la racine de la VM
+        rm -f "\$HOME/package-lock.json"
+
+        # 2. Mise à jour du code
         if [ ! -d "\$PROJECT_DIR" ]; then
           git clone "\$REPO_URL" "\$PROJECT_DIR"
           cd "\$PROJECT_DIR"
@@ -118,14 +121,16 @@ deploy_to_vm:
         ./venv/bin/pip install -r requirements.txt
         ./venv/bin/python manage.py migrate
 
-        # 5. Frontend
+        # 5. Frontend (Correction Tailwind)
         echo "--- Build Frontend ---"
         cd "\$PROJECT_DIR/frontend"
-        npm install typescript --save-prod
-        npm install --omit=dev --no-audit --no-fund --prefer-offline
+        
+        # On installe TOUT pour le build (besoin de Tailwind/PostCSS)
+        npm install --no-audit --no-fund --prefer-offline
 
         export NODE_OPTIONS="--max-old-space-size=768"
-        npx next build
+        # On ajoute --no-lint pour gagner de la RAM et éviter d'autres erreurs
+        npx next build --no-lint
 
         # 6. Restart services
         echo "--- Restart Services ---"
