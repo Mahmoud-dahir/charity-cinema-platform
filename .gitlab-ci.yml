@@ -131,11 +131,15 @@ deploy_to_vm:
         ./venv/bin/pip install -r requirements.txt
         ./venv/bin/python manage.py migrate
 
-        # 5. Frontend (Installation légère + Build)
-        cd \"\$PROJECT_DIR/frontend\" || { echo 'Erreur: Dossier frontend introuvable'; exit 1; }
-        # --omit=dev évite d'installer les outils de test lourds (Jest, etc.)
+# 5. Frontend (Build optimisé pour petite RAM)
+        cd "$PROJECT_DIR/frontend" || { echo 'Erreur: Dossier frontend introuvable'; exit 1; }
+        
+        # Installation ciblée : on garde TS mais on vire le reste du dev
         npm install typescript --save-prod && npm install --omit=dev --no-audit --no-fund --prefer-offline
-        npm run build
+
+        # On lance le build sans Turbopack et sans Lint (trop gourmand en CPU/RAM)
+        # On augmente un peu la RAM autorisée pour que Node ne s'étouffe pas
+        NODE_OPTIONS='--max-old-space-size=768' npx next build --no-lint
 
         # 6. Relance PM2 avec dossiers de travail propres
         pm2 delete all || true
