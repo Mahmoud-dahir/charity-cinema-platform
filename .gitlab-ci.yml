@@ -88,6 +88,11 @@ sonarqube-vulnerability-report:
 # ---------------------------------------------------------
 # STAGE: DEPLOY (Optimisé pour VM à disque limité)
 # ---------------------------------------------------------
+# ... (Tes stages test et sonarqube ne changent pas)
+
+# ---------------------------------------------------------
+# STAGE: DEPLOY (Optimisé pour VM à disque limité)
+# ---------------------------------------------------------
 deploy_to_vm:
   stage: deploy
   image: alpine:latest
@@ -97,7 +102,7 @@ deploy_to_vm:
     - eval $(ssh-agent -s)
     - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
     - ssh-keyscan 192.168.75.115 >> ~/.ssh/known_hosts
-script:
+  script:
     - |
       ssh gitlabci@192.168.75.115 "
         # 1. Injection des variables et environnement Node
@@ -133,7 +138,7 @@ script:
         # Installation légère
         npm install typescript --save-prod && npm install --omit=dev --no-audit --no-fund --prefer-offline
 
-        # Build standard (plus stable que Turbo sur petite VM)
+        # Build standard sans Turbo (plus stable sur petite RAM)
         export NODE_OPTIONS='--max-old-space-size=768'
         npx next build --no-lint
 
