@@ -97,7 +97,7 @@ deploy_to_vm:
     - eval $(ssh-agent -s)
     - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
     - ssh-keyscan 192.168.75.115 >> ~/.ssh/known_hosts
-  script:
+script:
     - |
       ssh gitlabci@192.168.75.115 "
         # 1. Injection des variables et environnement Node
@@ -105,14 +105,10 @@ deploy_to_vm:
         export NVM_DIR=\"\$HOME/.nvm\"
         [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\"
         
-        # Sécurité RAM pour éviter le crash (Killed)
-        export NODE_OPTIONS='--max-old-space-size=512'
-
         PROJECT_DIR=\"\$HOME/mif10-projet-transversal-de-master-informatique-2025-2026-g15\"
         REPO_URL=\"https://oauth2:\${MY_DEPLOY_TOKEN}@forge.univ-lyon1.fr/mif10-projet-transversal-de-master-informatique-2025-2026-g15/mif10-projet-transversal-de-master-informatique-2025-2026-g15.git\"
 
-        # 2. NETTOYAGE D'URGENCE (Anti-Disque Plein)
-        # On vide les logs PM2 et le cache NPM avant de commencer
+        # 2. NETTOYAGE D'URGENCE
         pm2 flush
         npm cache clean --force
 
@@ -125,23 +121,23 @@ deploy_to_vm:
           git fetch origin && git reset --hard FETCH_HEAD
         fi
 
-        # 4. Backend (Python/Django)
-        cd \"\$PROJECT_DIR/backend\" || { echo 'Erreur: Dossier backend introuvable'; exit 1; }
+        # 4. Backend
+        cd \"\$PROJECT_DIR/backend\" || exit 1
         python3 -m venv venv
         ./venv/bin/pip install -r requirements.txt
         ./venv/bin/python manage.py migrate
 
-# 5. Frontend (Build optimisé pour petite RAM)
-        cd "$PROJECT_DIR/frontend" || { echo 'Erreur: Dossier frontend introuvable'; exit 1; }
+        # 5. Frontend (Build optimisé)
+        cd \"\$PROJECT_DIR/frontend\" || exit 1
         
-        # Installation ciblée : on garde TS mais on vire le reste du dev
+        # Installation légère
         npm install typescript --save-prod && npm install --omit=dev --no-audit --no-fund --prefer-offline
 
-        # On lance le build sans Turbopack et sans Lint (trop gourmand en CPU/RAM)
-        # On augmente un peu la RAM autorisée pour que Node ne s'étouffe pas
-        NODE_OPTIONS='--max-old-space-size=768' npx next build --no-lint
+        # Build standard (plus stable que Turbo sur petite VM)
+        export NODE_OPTIONS='--max-old-space-size=768'
+        npx next build --no-lint
 
-        # 6. Relance PM2 avec dossiers de travail propres
+        # 6. Relance PM2
         pm2 delete all || true
         pm2 start ./venv/bin/python --name 'backend' --cwd \"\$PROJECT_DIR/backend\" -- manage.py runserver 0.0.0.0:8000
         pm2 start npm --name 'frontend' --cwd \"\$PROJECT_DIR/frontend\" -- start -- -p 3000
