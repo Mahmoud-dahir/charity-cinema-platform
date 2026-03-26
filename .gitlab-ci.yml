@@ -82,13 +82,12 @@ deploy_to_vm:
     - nc -zv 192.168.75.115 22
     - ssh-keyscan -H 192.168.75.115 >> ~/.ssh/known_hosts 2>/dev/null || true
     - chmod 644 ~/.ssh/known_hosts
-script:
+  script:
     - |
       ssh gitlabci@192.168.75.115 /bin/bash -s <<EOF
         set -e
         echo "--- Début du déploiement sur la VM ---"
 
-        # 1. Environnement
         export NVM_DIR="\$HOME/.nvm"
         [ -s "\$NVM_DIR/nvm.sh" ] && . "\$NVM_DIR/nvm.sh"
 
@@ -97,7 +96,6 @@ script:
 
         rm -f "\$HOME/package-lock.json"
 
-        # 2. Mise à jour du code
         if [ ! -d "\$PROJECT_DIR" ]; then
           git clone "\$REPO_URL" "\$PROJECT_DIR"
           cd "\$PROJECT_DIR"
@@ -108,33 +106,23 @@ script:
           git reset --hard origin/main
         fi
 
-        # 3. Nettoyage
         pm2 flush || true
         npm cache clean --force || true
-        rm -rf "\$PROJECT_DIR/frontend/.next"
 
-        # 4. Backend
         echo "--- Build Backend ---"
         cd "\$PROJECT_DIR/backend"
         python3 -m venv venv
         ./venv/bin/pip install -r requirements.txt
         ./venv/bin/python manage.py migrate
 
-        # 5. Frontend
         echo "--- Build Frontend ---"
         cd "\$PROJECT_DIR/frontend"
-        
-        # Installation complète pour avoir Tailwind/PostCSS
-        npm install --no-audit --no-fund --prefer-offline
+        rm -rf node_modules .next
+        npm ci --no-audit --no-fund
 
-        # On désactive le Lint et le Type-check pendant le build pour économiser la RAM
         export NODE_OPTIONS="--max-old-space-size=768"
-        export NEXT_DISABLE_ESLINT=1
-        export NEXT_DISABLE_TYPECHECK=1
-        
-        npx next build
+        npx next build --webpack
 
-        # 6. Restart services
         echo "--- Restart Services ---"
         pm2 delete all || true
         pm2 start "\$PROJECT_DIR/backend/venv/bin/python" --name backend --cwd "\$PROJECT_DIR/backend" -- manage.py runserver 0.0.0.0:8000
