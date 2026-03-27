@@ -56,7 +56,7 @@ export default function LoginModal({
 
       if (res.ok) {
         onClose();
-        router.refresh();
+        window.location.href = '/dashboard';
         return
       }
 

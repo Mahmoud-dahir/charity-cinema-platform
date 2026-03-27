@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Search, User, SlidersHorizontal, Heart } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, User, SlidersHorizontal, Heart, LayoutDashboard } from 'lucide-react';
+import Link from 'next/link';
 import LoginModal from './login/page';
 import RegisterModal from './register/page';
 
@@ -64,6 +65,24 @@ const MovieCard = ({
 export default function Home() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(res => {
+        if (!res.ok) throw new Error('Not auth');
+        return res.json();
+      })
+      .then(data => {
+        setUser(data);
+        setIsAuthLoading(false);
+      })
+      .catch(() => {
+        setUser(null);
+        setIsAuthLoading(false);
+      });
+  }, []);
 
   const cards = [
     {
@@ -104,9 +123,9 @@ export default function Home() {
 
       {/* Header / Navbar */}
       <header className="bg-[#1a1a1a] text-white py-4 px-6 md:px-12 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-40">
-        <div className="text-2xl font-bold tracking-tight">
+        <Link href="/" className="text-2xl font-bold tracking-tight">
           Nom<span className="text-[#facc15]">Application</span>
-        </div>
+        </Link>
         
         <div className="relative w-full max-w-lg hidden md:block">
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
@@ -120,15 +139,26 @@ export default function Home() {
         </div>
 
         <div className="flex items-center space-x-8">
-          <div 
-            className="flex items-center space-x-3 cursor-pointer group"
-            onClick={() => setIsLoginModalOpen(true)}
-          >
-            <div className="bg-[#facc15] text-[#1a1a1a] p-2 rounded-full group-hover:bg-yellow-400 transition-colors">
-              <User className="w-5 h-5" />
+          {isAuthLoading ? (
+            <div className="w-32 h-8 bg-gray-700 animate-pulse rounded-full"></div>
+          ) : user ? (
+            <Link href="/dashboard" className="flex items-center space-x-3 cursor-pointer group">
+              <div className="bg-[#facc15] text-[#1a1a1a] p-2 rounded-full group-hover:bg-yellow-400 transition-colors">
+                <LayoutDashboard className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-medium hover:text-gray-300">Tableau de bord</span>
+            </Link>
+          ) : (
+            <div 
+              className="flex items-center space-x-3 cursor-pointer group"
+              onClick={() => setIsLoginModalOpen(true)}
+            >
+              <div className="bg-[#facc15] text-[#1a1a1a] p-2 rounded-full group-hover:bg-yellow-400 transition-colors">
+                <User className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-medium hover:text-gray-300">Connexion/Inscription</span>
             </div>
-            <span className="text-sm font-medium hover:text-gray-300">Connexion/Inscription</span>
-          </div>
+          )}
           
           <div className="flex items-center space-x-3 cursor-pointer group">
             <div className="bg-[#facc15] text-[#1a1a1a] p-2 rounded-full group-hover:bg-yellow-400 transition-colors">

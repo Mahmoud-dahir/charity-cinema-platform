@@ -29,7 +29,7 @@ async function refreshAccessToken(refreshToken: string) {
 }
 
 export async function GET() {
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value
   const refreshToken = cookieStore.get(REFRESH_TOKEN_COOKIE)?.value
 
