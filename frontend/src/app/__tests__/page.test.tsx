@@ -29,7 +29,7 @@ describe('Home Component', () => {
     render(<Home />);
 
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: /NomApplication/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /Nom.*Application/i })).toBeInTheDocument();
       expect(screen.getByText(/Slogan/i)).toBeInTheDocument();
       expect(screen.getByText(/Connexion\/Inscription/i)).toBeInTheDocument();
     });
