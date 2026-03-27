@@ -82,7 +82,7 @@ export default function RegisterModal({
 
       if (res.ok) {
         onClose();
-        router.refresh();
+        window.location.href = '/dashboard';
         return
       }
 
