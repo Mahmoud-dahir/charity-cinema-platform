@@ -2,6 +2,16 @@ import { render, screen, waitFor } from '@testing-library/react';
 import Home from '../page';
 import '@testing-library/jest-dom';
 
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    prefetch: jest.fn(),
+    back: jest.fn(),
+  }),
+  usePathname: () => '/',
+}));
+
 describe('Home Component', () => {
   beforeEach(() => {
     global.fetch = jest.fn();
