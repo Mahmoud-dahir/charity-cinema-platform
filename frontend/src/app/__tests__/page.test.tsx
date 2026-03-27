@@ -1,6 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import Home from '../page'
-import React from 'react'
 
 
 describe('Home Component', () => {
