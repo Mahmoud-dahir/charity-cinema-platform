@@ -7,7 +7,6 @@ jest.mock('next/navigation', () => ({
     push: jest.fn(),
     replace: jest.fn(),
     prefetch: jest.fn(),
-    back: jest.fn(),
   }),
   usePathname: () => '/',
 }));
@@ -29,11 +28,9 @@ describe('Home Component', () => {
 
     render(<Home />);
 
-    expect(screen.getByText(/Nom/i)).toBeInTheDocument();
-    expect(screen.getByText(/Application/i)).toBeInTheDocument();
-    expect(screen.getByText(/Slogan/i)).toBeInTheDocument();
-
     await waitFor(() => {
+      expect(screen.getByRole('link', { name: /NomApplication/i })).toBeInTheDocument();
+      expect(screen.getByText(/Slogan/i)).toBeInTheDocument();
       expect(screen.getByText(/Connexion\/Inscription/i)).toBeInTheDocument();
     });
   });
@@ -48,20 +45,18 @@ describe('Home Component', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Tableau de bord/i)).toBeInTheDocument();
+      expect(screen.queryByText(/Connexion\/Inscription/i)).not.toBeInTheDocument();
     });
-    
-    expect(screen.queryByText(/Connexion\/Inscription/i)).not.toBeInTheDocument();
   });
 
-  it('renders movie cards correctly', () => {
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: false,
-      json: async () => ({})
-    });
+  it('renders movie cards correctly', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({ ok: false, json: async () => ({}) });
 
     render(<Home />);
 
-    expect(screen.getByText(/Bohemian Rapsody/i)).toBeInTheDocument();
-    expect(screen.getByText(/Prochaines Séances Solidaires/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/Bohemian Rapsody/i)).toBeInTheDocument();
+      expect(screen.getByText(/Prochaines Séances Solidaires/i)).toBeInTheDocument();
+    });
   });
 });
