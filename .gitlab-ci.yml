@@ -27,7 +27,7 @@ test-frontend:
     - main
   script:
     - cd frontend
-    - npm ci || npm install
+    - npm ci
     - npm test -- --coverage --watchAll=false
   artifacts:
     paths:
@@ -72,64 +72,133 @@ deploy_to_vm:
   image: alpine:latest
   only:
     - main
+  needs:
+    - job: test-backend
+      artifacts: false
+    - job: test-frontend
+      artifacts: false
+  dependencies: []
   before_script:
     - apk add --no-cache openssh-client bash netcat-openbsd
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
-    - eval $(ssh-agent -s)
+    - eval "$(ssh-agent -s)"
     - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
     - echo "=== Test connectivité SSH vers la VM ==="
-    - nc -zv 192.168.75.115 22
+    - nc -zvw5 192.168.75.115 22
     - rm -f ~/.ssh/known_hosts
     - ssh-keyscan -H 192.168.75.115 > ~/.ssh/known_hosts
-    - cat ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
   script:
+    - export REMOTE_USER="gitlabci"
+    - export REMOTE_HOST="192.168.75.115"
+    - export PROJECT_DIR="/home/gitlabci/mif10-projet-transversal-de-master-informatique-2025-2026-g15"
+    - export REPO_HTTP_URL="https://forge.univ-lyon1.fr/mif10-projet-transversal-de-master-informatique-2025-2026-g15/mif10-projet-transversal-de-master-informatique-2025-2026-g15.git"
+    - export REPO_AUTH_B64="$(printf 'oauth2:%s' "$MY_DEPLOY_TOKEN" | base64 | tr -d '\n')"
     - |
-      ssh -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/known_hosts gitlabci@192.168.75.115 /bin/bash -s <<EOF
-        set -e
+      ssh -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+      "${REMOTE_USER}@${REMOTE_HOST}" \
+      "PROJECT_DIR='${PROJECT_DIR}' REPO_HTTP_URL='${REPO_HTTP_URL}' REPO_AUTH_B64='${REPO_AUTH_B64}' /bin/bash -s" <<'EOF'
+        set -euo pipefail
+
         echo "--- Début du déploiement sur la VM ---"
 
-        export NVM_DIR="\$HOME/.nvm"
-        [ -s "\$NVM_DIR/nvm.sh" ] && . "\$NVM_DIR/nvm.sh"
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 
-        PROJECT_DIR="\$HOME/mif10-projet-transversal-de-master-informatique-2025-2026-g15"
-        REPO_URL="https://oauth2:${MY_DEPLOY_TOKEN}@forge.univ-lyon1.fr/mif10-projet-transversal-de-master-informatique-2025-2026-g15/mif10-projet-transversal-de-master-informatique-2025-2026-g15.git"
+        nvm install 20 >/dev/null
+        nvm use 20 >/dev/null
 
-        rm -f "\$HOME/package-lock.json"
+        echo "--- Versions runtime ---"
+        node -v
+        npm -v
+        python3 --version
 
-        if [ ! -d "\$PROJECT_DIR" ]; then
-          git clone "\$REPO_URL" "\$PROJECT_DIR"
-          cd "\$PROJECT_DIR"
+        BACKEND_DEPS_CHANGED=1
+        FRONTEND_DEPS_CHANGED=1
+
+        if [ ! -d "$PROJECT_DIR/.git" ]; then
+          echo "--- Clone initial du dépôt ---"
+          git -c http.extraHeader="Authorization: Basic ${REPO_AUTH_B64}" clone "$REPO_HTTP_URL" "$PROJECT_DIR"
         else
-          cd "\$PROJECT_DIR"
-          git remote set-url origin "\$REPO_URL"
-          git fetch origin
-          git reset --hard origin/main
+          echo "--- Mise à jour du dépôt ---"
+          cd "$PROJECT_DIR"
+          PREV_HEAD="$(git rev-parse HEAD)"
+          git remote set-url origin "$REPO_HTTP_URL"
+          git -c http.extraHeader="Authorization: Basic ${REPO_AUTH_B64}" fetch origin main
+          TARGET_HEAD="$(git rev-parse origin/main)"
+
+          if git diff --quiet "$PREV_HEAD" "$TARGET_HEAD" -- backend/requirements.txt; then
+            BACKEND_DEPS_CHANGED=0
+          fi
+
+          if git diff --quiet "$PREV_HEAD" "$TARGET_HEAD" -- frontend/package.json frontend/package-lock.json; then
+            FRONTEND_DEPS_CHANGED=0
+          fi
+
+          git reset --hard "$TARGET_HEAD"
         fi
 
-        pm2 flush || true
-        npm cache clean --force || true
-
         echo "--- Build Backend ---"
-        cd "\$PROJECT_DIR/backend"
-        python3 -m venv venv
-        ./venv/bin/pip install -r requirements.txt
-        ./venv/bin/python manage.py migrate
+        cd "$PROJECT_DIR/backend"
+
+        if [ ! -d venv ]; then
+          python3 -m venv venv
+        fi
+
+        if [ "$BACKEND_DEPS_CHANGED" -eq 1 ] || [ ! -x "./venv/bin/pip" ]; then
+          echo "Requirements backend modifiés -> installation pip"
+          ./venv/bin/pip install --no-cache-dir -r requirements.txt
+        else
+          echo "Requirements backend inchangés -> pas de pip install"
+        fi
+
+        ./venv/bin/python manage.py migrate --noinput
 
         echo "--- Build Frontend ---"
-        cd "\$PROJECT_DIR/frontend"
-        rm -rf node_modules .next
-        npm ci --no-audit --no-fund
+        cd "$PROJECT_DIR/frontend"
 
+        if [ ! -f package-lock.json ]; then
+          echo "ERREUR: package-lock.json absent"
+          exit 1
+        fi
+
+        if [ "$FRONTEND_DEPS_CHANGED" -eq 1 ] || [ ! -d node_modules ]; then
+          echo "Dépendances frontend modifiées -> npm ci"
+          rm -rf node_modules
+          npm ci --prefer-offline --no-audit --no-fund
+        else
+          echo "Dépendances frontend inchangées -> pas de npm ci"
+        fi
+
+        rm -rf .next
         export NODE_OPTIONS="--max-old-space-size=768"
-        npx next build --webpack
+        npm run build
 
         echo "--- Restart Services ---"
-        pm2 delete all || true
-        pm2 start "\$PROJECT_DIR/backend/venv/bin/python" --name backend --cwd "\$PROJECT_DIR/backend" -- manage.py runserver 0.0.0.0:8000
-        pm2 start npm --name frontend --cwd "\$PROJECT_DIR/frontend" -- start -- -p 3000
+
+        if pm2 describe backend >/dev/null 2>&1; then
+          pm2 restart backend
+        else
+          pm2 start "$PROJECT_DIR/backend/venv/bin/python" \
+            --name backend \
+            --cwd "$PROJECT_DIR/backend" \
+            -- manage.py runserver 0.0.0.0:8000
+        fi
+
+        if pm2 describe frontend >/dev/null 2>&1; then
+          pm2 restart frontend
+        else
+          pm2 start npm \
+            --name frontend \
+            --cwd "$PROJECT_DIR/frontend" \
+            -- start -- -p 3000
+        fi
+
         pm2 save
 
-        echo "--- Déploiement terminé avec succès ! ---"
+        echo "--- État final PM2 ---"
+        pm2 list
+
+        echo "--- Déploiement terminé avec succès ---"
       EOF
