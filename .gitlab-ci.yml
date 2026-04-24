@@ -96,6 +96,8 @@ deploy_to_vm:
           nvm use 20 || nvm use default || true
         fi
 
+        export PATH="\$HOME/.nvm/versions/node/v20.20.2/bin:\$PATH"
+
         echo "--- Vérification environnement ---"
         echo "USER=\$(whoami)"
         echo "HOME=\$HOME"
@@ -133,11 +135,24 @@ deploy_to_vm:
 
         echo "--- Build Frontend ---"
         cd "\$PROJECT_DIR/frontend"
-        rm -rf node_modules .next
-        npm ci --no-audit --no-fund
+        rm -rf .next
+
+        npm config set fetch-retries 5
+        npm config set fetch-retry-mintimeout 20000
+        npm config set fetch-retry-maxtimeout 120000
+        npm config set registry https://registry.npmjs.org/
+
+        if [ ! -d node_modules ]; then
+          npm ci --no-audit --no-fund --prefer-offline
+        else
+          npm install --no-audit --no-fund --prefer-offline
+        fi
 
         export NODE_OPTIONS="--max-old-space-size=768"
         npx next build --webpack
+
+        echo "--- Vérification PM2 ---"
+        command -v pm2 || npm install -g pm2
 
         echo "--- Restart Services ---"
         pm2 delete all || true
