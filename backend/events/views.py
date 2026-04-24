@@ -1,7 +1,10 @@
 from django.db import models
+from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from rest_framework import permissions, viewsets
+from rest_framework import permissions, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.response import Response
 
 from .models import Event
 from .serializers import EventSerializer
@@ -98,5 +101,40 @@ class EventViewSet(viewsets.ModelViewSet):
 			raise PermissionDenied("User must be attached to an association to create events")
 
 		serializer.save(created_by=user, association=user.association)
+
+	@action(detail=True, methods=["post"])
+	def publish(self, request, pk=None):
+		event: Event = self.get_object()
+
+		if event.status == Event.Status.PUBLISHED:
+			return Response({"detail": "Event is already published"}, status=status.HTTP_400_BAD_REQUEST)
+		if event.status == Event.Status.CANCELLED:
+			return Response({"detail": "Cancelled event cannot be published"}, status=status.HTTP_400_BAD_REQUEST)
+		if event.status != Event.Status.DRAFT:
+			return Response({"detail": "Only draft events can be published"}, status=status.HTTP_400_BAD_REQUEST)
+
+		event.status = Event.Status.PUBLISHED
+		event.published_at = timezone.now()
+		event.cancel_reason = ""
+		event.save(update_fields=["status", "published_at", "cancel_reason", "updated_at"])
+
+		return Response(self.get_serializer(event).data, status=status.HTTP_200_OK)
+
+	@action(detail=True, methods=["post"])
+	def cancel(self, request, pk=None):
+		event: Event = self.get_object()
+
+		if event.status == Event.Status.CANCELLED:
+			return Response({"detail": "Event is already cancelled"}, status=status.HTTP_400_BAD_REQUEST)
+
+		cancel_reason = (request.data or {}).get("cancel_reason")
+		if not cancel_reason or not str(cancel_reason).strip():
+			return Response({"cancel_reason": ["This field is required."]}, status=status.HTTP_400_BAD_REQUEST)
+
+		event.status = Event.Status.CANCELLED
+		event.cancel_reason = str(cancel_reason).strip()
+		event.save(update_fields=["status", "cancel_reason", "updated_at"])
+
+		return Response(self.get_serializer(event).data, status=status.HTTP_200_OK)
 
 # Create your views here.

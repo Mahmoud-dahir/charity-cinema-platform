@@ -43,6 +43,8 @@ class EventSerializer(serializers.ModelSerializer):
             "id",
             "created_by",
             "association",
+            "status",
+            "cancel_reason",
             "published_at",
             "created_at",
             "updated_at",
