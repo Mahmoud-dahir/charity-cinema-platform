@@ -205,3 +205,155 @@ class EventsEditorApiTests(TestCase):
         self.assertEqual(res.status_code, 200)
         self.draft.refresh_from_db()
         self.assertEqual(self.draft.status, Event.Status.DRAFT)
+
+
+class EventsSignupApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.association = Association.objects.create(name="Asso 1")
+        self.other_association = Association.objects.create(name="Asso 2")
+
+        self.editor = User.objects.create_user(
+            email="editor@example.com",
+            username="editor",
+            password="Password123!",
+            user_type="admin",
+            association=self.association,
+        )
+        self.other_editor = User.objects.create_user(
+            email="other_editor@example.com",
+            username="other_editor",
+            password="Password123!",
+            user_type="admin",
+            association=self.other_association,
+        )
+        self.member = User.objects.create_user(
+            email="member@example.com",
+            username="member",
+            password="Password123!",
+            user_type="user",
+        )
+        self.member2 = User.objects.create_user(
+            email="member2@example.com",
+            username="member2",
+            password="Password123!",
+            user_type="user",
+        )
+
+        now = timezone.now()
+        self.published = Event.objects.create(
+            title="Publié",
+            movie_title="Film",
+            description="Desc",
+            starts_at=now + timezone.timedelta(days=5),
+            location="Lyon",
+            status=Event.Status.PUBLISHED,
+            published_at=now,
+            created_by=self.editor,
+            association=self.association,
+        )
+        self.draft = Event.objects.create(
+            title="Brouillon",
+            movie_title="Film",
+            description="Desc",
+            starts_at=now + timezone.timedelta(days=6),
+            location="Lyon",
+            status=Event.Status.DRAFT,
+            created_by=self.editor,
+            association=self.association,
+        )
+        self.cancelled = Event.objects.create(
+            title="Annulé",
+            movie_title="Film",
+            description="Desc",
+            starts_at=now + timezone.timedelta(days=7),
+            location="Lyon",
+            status=Event.Status.CANCELLED,
+            cancel_reason="Test",
+            created_by=self.editor,
+            association=self.association,
+        )
+
+    def test_member_can_signup_published_event(self):
+        self.client.force_authenticate(self.member)
+        res = self.client.post(f"/api/events/{self.published.id}/signup/", {}, format="json")
+        self.assertEqual(res.status_code, 201)
+
+        res2 = self.client.post(f"/api/events/{self.published.id}/signup/", {}, format="json")
+        self.assertEqual(res2.status_code, 400)
+
+    def test_unsubscribe_is_allowed_and_idempotent(self):
+        self.client.force_authenticate(self.member)
+        self.client.post(f"/api/events/{self.published.id}/signup/", {}, format="json")
+
+        res = self.client.delete(f"/api/events/{self.published.id}/signup/")
+        self.assertEqual(res.status_code, 204)
+
+        res2 = self.client.delete(f"/api/events/{self.published.id}/signup/")
+        self.assertEqual(res2.status_code, 204)
+
+    def test_signup_requires_published_event(self):
+        self.client.force_authenticate(self.member)
+
+        res = self.client.post(f"/api/events/{self.draft.id}/signup/", {}, format="json")
+        self.assertEqual(res.status_code, 400)
+
+        res = self.client.post(f"/api/events/{self.cancelled.id}/signup/", {}, format="json")
+        self.assertEqual(res.status_code, 400)
+
+    def test_capacity_is_enforced(self):
+        now = timezone.now()
+        limited = Event.objects.create(
+            title="Capacité 1",
+            movie_title="Film",
+            description="Desc",
+            starts_at=now + timezone.timedelta(days=10),
+            location="Lyon",
+            status=Event.Status.PUBLISHED,
+            published_at=now,
+            capacity=1,
+            created_by=self.editor,
+            association=self.association,
+        )
+
+        self.client.force_authenticate(self.member)
+        res = self.client.post(f"/api/events/{limited.id}/signup/", {}, format="json")
+        self.assertEqual(res.status_code, 201)
+
+        self.client.force_authenticate(self.member2)
+        res = self.client.post(f"/api/events/{limited.id}/signup/", {}, format="json")
+        self.assertEqual(res.status_code, 400)
+
+    def test_editor_can_also_signup(self):
+        self.client.force_authenticate(self.editor)
+        res = self.client.post(f"/api/events/{self.published.id}/signup/", {}, format="json")
+        self.assertEqual(res.status_code, 201)
+
+    def test_participants_list_permissions_and_minimal_payload(self):
+        self.client.force_authenticate(self.member)
+        self.client.post(f"/api/events/{self.published.id}/signup/", {}, format="json")
+        self.client.force_authenticate(self.editor)
+        self.client.post(f"/api/events/{self.published.id}/signup/", {}, format="json")
+
+        # Member cannot access participants
+        self.client.force_authenticate(self.member)
+        res = self.client.get(f"/api/events/{self.published.id}/participants/")
+        self.assertEqual(res.status_code, 403)
+
+        # Other association editor cannot access
+        self.client.force_authenticate(self.other_editor)
+        res = self.client.get(f"/api/events/{self.published.id}/participants/")
+        self.assertEqual(res.status_code, 403)
+
+        # Correct association editor can access
+        self.client.force_authenticate(self.editor)
+        res = self.client.get(f"/api/events/{self.published.id}/participants/")
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(isinstance(res.data, list))
+        self.assertGreaterEqual(len(res.data), 2)
+
+        first = res.data[0]
+        self.assertIn("id", first)
+        self.assertIn("username", first)
+        self.assertIn("first_name", first)
+        self.assertIn("last_name", first)
