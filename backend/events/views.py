@@ -1,16 +1,16 @@
 from django.db import models
 from django.utils.dateparse import parse_datetime
 from rest_framework import permissions, viewsets
+from rest_framework.exceptions import PermissionDenied
 
 from .models import Event
 from .serializers import EventSerializer
 
 
-class IsAdminUserType(permissions.BasePermission):
-	"""Allow access to platform admins.
+class IsAssociationEditor(permissions.BasePermission):
+	"""Allow writes only for users attached to an association.
 
-	Current user model includes a `user_type` field (see accounts.User).
-	We accept either `user_type == 'admin'` or staff flag.
+	Per the domain doc, an "admin/editor" is a user linked to an Association.
 	"""
 
 	def has_permission(self, request, view):
@@ -19,7 +19,13 @@ class IsAdminUserType(permissions.BasePermission):
 			return False
 		if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
 			return True
-		return getattr(user, "user_type", None) == "admin"
+		return bool(getattr(user, "association_id", None))
+
+	def has_object_permission(self, request, view, obj: Event):
+		user = request.user
+		if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
+			return True
+		return bool(user.is_authenticated and user.association_id and obj.association_id == user.association_id)
 
 
 class EventViewSet(viewsets.ModelViewSet):
@@ -29,25 +35,26 @@ class EventViewSet(viewsets.ModelViewSet):
 	def get_permissions(self):
 		if self.action in ["list", "retrieve"]:
 			return [permissions.AllowAny()]
-		return [IsAdminUserType()]
+		return [IsAssociationEditor()]
 
 	def get_queryset(self):
 		qs = Event.objects.all()
 
-		# Read endpoints: only published events for visitors/members.
 		if self.action in ["list", "retrieve"]:
 			user = self.request.user
-			is_admin = bool(
-				user
-				and user.is_authenticated
-				and (
-					getattr(user, "is_staff", False)
-					or getattr(user, "is_superuser", False)
-					or getattr(user, "user_type", None) == "admin"
-				)
-			)
-			if not is_admin:
-				qs = qs.filter(status=Event.Status.PUBLISHED)
+			if not user or not user.is_authenticated:
+				qs = qs.filter(status__in=[Event.Status.PUBLISHED, Event.Status.CANCELLED])
+			else:
+				# Member: published/cancelled only.
+				if not getattr(user, "association_id", None) and not (getattr(user, "is_staff", False) or getattr(user, "is_superuser", False)):
+					qs = qs.filter(status__in=[Event.Status.PUBLISHED, Event.Status.CANCELLED])
+				else:
+					# Association editor: also see drafts for own association (or own drafts).
+					qs = qs.filter(
+						models.Q(status__in=[Event.Status.PUBLISHED, Event.Status.CANCELLED])
+						| models.Q(status=Event.Status.DRAFT, association_id=user.association_id)
+						| models.Q(status=Event.Status.DRAFT, created_by=user)
+					)
 
 		# Filters for visitor use-cases.
 		status_param = self.request.query_params.get("status")
@@ -86,6 +93,10 @@ class EventViewSet(viewsets.ModelViewSet):
 		return qs.distinct()
 
 	def perform_create(self, serializer):
-		serializer.save(created_by=self.request.user)
+		user = self.request.user
+		if not getattr(user, "association_id", None):
+			raise PermissionDenied("User must be attached to an association to create events")
+
+		serializer.save(created_by=user, association=user.association)
 
 # Create your views here.

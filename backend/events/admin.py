@@ -12,6 +12,7 @@ class EventAdmin(admin.ModelAdmin):
 		"starts_at",
 		"location",
 		"status",
+		"association",
 		"created_by",
 	)
 	list_filter = ("status", "starts_at")

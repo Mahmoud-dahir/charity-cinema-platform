@@ -2,6 +2,8 @@ from django.conf import settings
 from django.db import models
 from django.utils.text import slugify
 
+from accounts.models import Association
+
 
 class EventCategory(models.Model):
 	name = models.CharField(max_length=120)
@@ -60,6 +62,12 @@ class Event(models.Model):
 		settings.AUTH_USER_MODEL,
 		on_delete=models.PROTECT,
 		related_name="created_events",
+	)
+
+	association = models.ForeignKey(
+		Association,
+		on_delete=models.PROTECT,
+		related_name="events",
 	)
 
 	created_at = models.DateTimeField(auto_now_add=True)

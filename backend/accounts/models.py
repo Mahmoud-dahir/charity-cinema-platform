@@ -7,6 +7,68 @@ from django.utils import timezone
 import uuid
 
 
+class Association(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    website_url = models.URLField(blank=True)
+    logo = models.ImageField(upload_to="associations/", blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "associations"
+        ordering = ["name"]
+        indexes = [models.Index(fields=["name"])]
+
+    def __str__(self):
+        return self.name
+
+
+class AssociationRequest(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    requested_by = models.ForeignKey(
+        "User",
+        on_delete=models.CASCADE,
+        related_name="association_requests",
+    )
+
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    website_url = models.URLField(blank=True)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
+
+    reviewed_at = models.DateTimeField(blank=True, null=True)
+    review_note = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "association_requests"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["requested_by", "status"]),
+            models.Index(fields=["status"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["requested_by"],
+                condition=models.Q(status="pending"),
+                name="uniq_pending_association_request_per_user",
+            )
+        ]
+
+    def __str__(self):
+        return f"AssociationRequest({self.name}) by {self.requested_by_id}"
+
+
 class UserManager(BaseUserManager):
     """Custom user manager"""
     
@@ -61,6 +123,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     # Basic profile info (admin-facing)
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
+
+    association = models.ForeignKey(
+        Association,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="users",
+    )
     
     # Permissions
     is_active = models.BooleanField(default=True)
@@ -99,6 +169,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     def get_short_name(self):
         """Return the user's short name"""
         return self.first_name
+
+    @property
+    def has_association(self):
+        return self.association_id is not None
 
 
 class UserProfile(models.Model):

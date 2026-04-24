@@ -35,12 +35,14 @@ class EventSerializer(serializers.ModelSerializer):
             "cover_image",
             "categories",
             "created_by",
+            "association",
             "created_at",
             "updated_at",
         ]
         read_only_fields = [
             "id",
             "created_by",
+            "association",
             "published_at",
             "created_at",
             "updated_at",

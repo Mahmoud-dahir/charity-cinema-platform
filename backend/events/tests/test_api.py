@@ -3,6 +3,7 @@ from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from accounts.models import Association
 from events.models import Event
 
 
@@ -13,17 +14,19 @@ class EventsPublicApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
 
-        self.admin = User.objects.create_user(
-            email="admin@example.com",
-            username="admin",
+        self.association = Association.objects.create(name="Ciné Solidarité")
+        self.editor = User.objects.create_user(
+            email="editor@example.com",
+            username="editor",
             password="Password123!",
             user_type="admin",
+            association=self.association,
         )
         self.member = User.objects.create_user(
             email="member@example.com",
             username="member",
             password="Password123!",
-            user_type="member",
+            user_type="user",
         )
 
         now = timezone.now()
@@ -35,7 +38,8 @@ class EventsPublicApiTests(TestCase):
             starts_at=now + timezone.timedelta(days=2),
             location="Lyon",
             status=Event.Status.PUBLISHED,
-            created_by=self.admin,
+            created_by=self.editor,
+            association=self.association,
         )
         self.draft = Event.objects.create(
             title="Brouillon interne",
@@ -44,7 +48,8 @@ class EventsPublicApiTests(TestCase):
             starts_at=now + timezone.timedelta(days=3),
             location="Villeurbanne",
             status=Event.Status.DRAFT,
-            created_by=self.admin,
+            created_by=self.editor,
+            association=self.association,
         )
 
     def test_list_is_public_and_only_published(self):
@@ -76,8 +81,8 @@ class EventsPublicApiTests(TestCase):
         self.assertIn(self.published.id, ids)
         self.assertNotIn(self.draft.id, ids)
 
-    def test_admin_can_see_drafts(self):
-        self.client.force_authenticate(self.admin)
+    def test_editor_can_see_drafts(self):
+        self.client.force_authenticate(self.editor)
         res = self.client.get("/api/events/")
         self.assertEqual(res.status_code, 200)
 
