@@ -6,4 +6,5 @@ urlpatterns = [
     path("health/", health, name="health"),
     path("hello-db/", hello_db, name="hello_db"),
     path("accounts/", include("accounts.urls")),
+    path("", include("events.urls")),
 ]
