@@ -115,4 +115,22 @@ class EventImage(models.Model):
 	def __str__(self) -> str:
 		return f"Image {self.id} for event {self.event_id}"
 
+
+class Signup(models.Model):
+	user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="signups")
+	event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="signups")
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		constraints = [
+			models.UniqueConstraint(fields=["user", "event"], name="uniq_signup_user_event"),
+		]
+		indexes = [
+			models.Index(fields=["event", "created_at"]),
+			models.Index(fields=["user", "created_at"]),
+		]
+
+	def __str__(self) -> str:
+		return f"Signup(user={self.user_id}, event={self.event_id})"
+
 # Create your models here.
