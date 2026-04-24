@@ -123,6 +123,9 @@ deploy_to_vm:
           git reset --hard origin/main
         fi
 
+        echo "--- Vérification PM2 ---"
+        command -v pm2 || npm install -g pm2
+
         echo "--- Nettoyage logs/cache ---"
         pm2 flush || true
         npm cache clean --force || true
@@ -148,11 +151,12 @@ deploy_to_vm:
           npm install --no-audit --no-fund --prefer-offline
         fi
 
+        echo "--- Préinstallation SWC Linux ---"
+        NEXT_VERSION=\$(node -p "const p=require('./package.json'); (((p.dependencies||{}).next)||((p.devDependencies||{}).next)||'').replace(/^[^0-9]*/, '')")
+        npm install --no-save "@next/swc-linux-x64-gnu@\${NEXT_VERSION}"
+
         export NODE_OPTIONS="--max-old-space-size=768"
         npx next build --webpack
-
-        echo "--- Vérification PM2 ---"
-        command -v pm2 || npm install -g pm2
 
         echo "--- Restart Services ---"
         pm2 delete all || true
