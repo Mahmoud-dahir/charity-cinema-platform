@@ -1,4 +1,5 @@
 from django.db import models
+from django.db import transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from rest_framework import permissions, status, viewsets
@@ -6,7 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
-from .models import Event
+from .models import Event, Signup
 from .serializers import EventSerializer
 
 
@@ -38,6 +39,8 @@ class EventViewSet(viewsets.ModelViewSet):
 	def get_permissions(self):
 		if self.action in ["list", "retrieve"]:
 			return [permissions.AllowAny()]
+		if self.action in ["signup"]:
+			return [permissions.IsAuthenticated()]
 		return [IsAssociationEditor()]
 
 	def get_queryset(self):
@@ -101,6 +104,54 @@ class EventViewSet(viewsets.ModelViewSet):
 			raise PermissionDenied("User must be attached to an association to create events")
 
 		serializer.save(created_by=user, association=user.association)
+
+	@action(detail=True, methods=["post", "delete"], url_path="signup")
+	def signup(self, request, pk=None):
+		user = request.user
+		event: Event = self.get_object()
+
+		if request.method == "DELETE":
+			Signup.objects.filter(user=user, event=event).delete()
+			return Response(status=status.HTTP_204_NO_CONTENT)
+
+		if event.status != Event.Status.PUBLISHED:
+			return Response({"detail": "Event must be published to sign up"}, status=status.HTTP_400_BAD_REQUEST)
+
+		# Enforce capacity if defined, safely under concurrent signups.
+		with transaction.atomic():
+			event_locked = Event.objects.select_for_update().get(pk=event.pk)
+			if Signup.objects.filter(user=user, event=event_locked).exists():
+				return Response({"detail": "Already signed up"}, status=status.HTTP_400_BAD_REQUEST)
+			if event_locked.capacity is not None:
+				current = Signup.objects.filter(event=event_locked).count()
+				if current >= event_locked.capacity:
+					return Response({"detail": "Event is full"}, status=status.HTTP_400_BAD_REQUEST)
+
+			signup = Signup.objects.create(user=user, event=event_locked)
+
+		return Response({"id": signup.id, "event": event.id, "user": user.id}, status=status.HTTP_201_CREATED)
+
+	@action(detail=True, methods=["get"], url_path="participants")
+	def participants(self, request, pk=None):
+		event: Event = self.get_object()
+		# Uses IsAssociationEditor permission class (incl. object-level association check)
+		# and is only accessible for users attached to an association.
+		participants = (
+			Signup.objects.filter(event=event)
+			.select_related("user")
+			.order_by("created_at")
+		)
+
+		data = [
+			{
+				"id": s.user.id,
+				"username": s.user.username,
+				"first_name": s.user.first_name,
+				"last_name": s.user.last_name,
+			}
+			for s in participants
+		]
+		return Response(data, status=status.HTTP_200_OK)
 
 	@action(detail=True, methods=["post"])
 	def publish(self, request, pk=None):
