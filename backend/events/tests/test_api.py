@@ -296,7 +296,7 @@ class EventsSignupApiTests(TestCase):
         self.client.force_authenticate(self.member)
 
         res = self.client.post(f"/api/events/{self.draft.id}/signup/", {}, format="json")
-        self.assertEqual(res.status_code, 400)
+        self.assertEqual(res.status_code, 404)
 
         res = self.client.post(f"/api/events/{self.cancelled.id}/signup/", {}, format="json")
         self.assertEqual(res.status_code, 400)

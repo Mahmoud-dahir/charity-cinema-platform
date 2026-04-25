@@ -7,6 +7,9 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
+from interactions.models import Comment, Favorite
+from interactions.serializers import CommentSerializer
+
 from .models import Event, Signup
 from .serializers import EventSerializer
 
@@ -41,12 +44,18 @@ class EventViewSet(viewsets.ModelViewSet):
 			return [permissions.AllowAny()]
 		if self.action in ["signup"]:
 			return [permissions.IsAuthenticated()]
+		if self.action in ["favorite"]:
+			return [permissions.IsAuthenticated()]
+		if self.action in ["comments"]:
+			if self.request.method == "GET":
+				return [permissions.AllowAny()]
+			return [permissions.IsAuthenticated()]
 		return [IsAssociationEditor()]
 
 	def get_queryset(self):
 		qs = Event.objects.all()
 
-		if self.action in ["list", "retrieve"]:
+		if self.action in ["list", "retrieve", "signup", "favorite", "comments"]:
 			user = self.request.user
 			if not user or not user.is_authenticated:
 				qs = qs.filter(status__in=[Event.Status.PUBLISHED, Event.Status.CANCELLED])
@@ -130,6 +139,45 @@ class EventViewSet(viewsets.ModelViewSet):
 			signup = Signup.objects.create(user=user, event=event_locked)
 
 		return Response({"id": signup.id, "event": event.id, "user": user.id}, status=status.HTTP_201_CREATED)
+
+	@action(detail=True, methods=["post", "delete"], url_path="favorite")
+	def favorite(self, request, pk=None):
+		user = request.user
+		event: Event = self.get_object()
+
+		if request.method == "DELETE":
+			Favorite.objects.filter(user=user, event=event).delete()
+			return Response(status=status.HTTP_204_NO_CONTENT)
+
+		if event.status != Event.Status.PUBLISHED:
+			return Response({"detail": "Event must be published to be favorited"}, status=status.HTTP_400_BAD_REQUEST)
+
+		favorite, created = Favorite.objects.get_or_create(user=user, event=event)
+		if not created:
+			return Response({"detail": "Already favorited"}, status=status.HTTP_400_BAD_REQUEST)
+
+		return Response({"id": favorite.id, "event": event.id, "user": user.id}, status=status.HTTP_201_CREATED)
+
+	@action(detail=True, methods=["get", "post"], url_path="comments")
+	def comments(self, request, pk=None):
+		event: Event = self.get_object()
+
+		if request.method == "GET":
+			qs = Comment.objects.filter(event=event).select_related("user").order_by("created_at", "id")
+			return Response(CommentSerializer(qs, many=True).data, status=status.HTTP_200_OK)
+
+		# POST
+		if event.status != Event.Status.PUBLISHED:
+			return Response({"detail": "Event must be published to comment"}, status=status.HTTP_400_BAD_REQUEST)
+
+		serializer = CommentSerializer(data=request.data)
+		serializer.is_valid(raise_exception=True)
+		comment = Comment.objects.create(
+			user=request.user,
+			event=event,
+			body=serializer.validated_data["body"],
+		)
+		return Response(CommentSerializer(comment).data, status=status.HTTP_201_CREATED)
 
 	@action(detail=True, methods=["get"], url_path="participants")
 	def participants(self, request, pk=None):
