@@ -3,7 +3,50 @@ Accounts Serializers
 """
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
-from .models import User, UserProfile
+from .models import AssociationRequest, User, UserProfile
+
+
+class AssociationRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AssociationRequest
+        fields = [
+            "id",
+            "requested_by",
+            "name",
+            "description",
+            "website_url",
+            "status",
+            "reviewed_at",
+            "review_note",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "requested_by",
+            "status",
+            "reviewed_at",
+            "created_at",
+            "updated_at",
+        ]
+
+
+class AssociationRequestCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AssociationRequest
+        fields = [
+            "id",
+            "name",
+            "description",
+            "website_url",
+            "status",
+            "created_at",
+        ]
+        read_only_fields = [
+            "id",
+            "status",
+            "created_at",
+        ]
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
