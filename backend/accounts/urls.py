@@ -9,11 +9,13 @@ from .views import (
     CustomTokenObtainPairView,
     UserViewSet,
     UserProfileViewSet,
+    AssociationRequestViewSet,
 )
 
 router = DefaultRouter()
 router.register(r'users', UserViewSet, basename='user')
 router.register(r'profiles', UserProfileViewSet, basename='userprofile')
+router.register(r'association-requests', AssociationRequestViewSet, basename='associationrequest')
 
 urlpatterns = [
     # Authentication
