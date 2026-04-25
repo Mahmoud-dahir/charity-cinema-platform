@@ -3,14 +3,36 @@ Accounts Admin Configuration
 """
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, UserProfile, EmailVerificationToken, PasswordResetToken
+from .models import (
+    Association,
+    AssociationRequest,
+    User,
+    UserProfile,
+    EmailVerificationToken,
+    PasswordResetToken,
+)
+
+
+@admin.register(Association)
+class AssociationAdmin(admin.ModelAdmin):
+    list_display = ["name", "website_url", "created_at"]
+    search_fields = ["name"]
+    readonly_fields = ["created_at", "updated_at"]
+
+
+@admin.register(AssociationRequest)
+class AssociationRequestAdmin(admin.ModelAdmin):
+    list_display = ["name", "requested_by", "status", "created_at", "reviewed_at"]
+    list_filter = ["status", "created_at"]
+    search_fields = ["name", "requested_by__email", "requested_by__username"]
+    readonly_fields = ["created_at", "updated_at"]
 
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     """Custom User Admin"""
     
-    list_display = ['email', 'username', 'first_name', 'last_name', 'user_type', 'is_active', 'is_verified', 'date_joined']
+    list_display = ['email', 'username', 'first_name', 'last_name', 'user_type', 'association', 'is_active', 'is_verified', 'date_joined']
     list_filter = ['user_type', 'is_active', 'is_verified', 'is_staff']
     search_fields = ['email', 'username', 'first_name', 'last_name']
     ordering = ['-date_joined']
@@ -18,6 +40,7 @@ class UserAdmin(BaseUserAdmin):
     fieldsets = (
         (None, {'fields': ('email', 'username', 'password')}),
         ('Personal Info', {'fields': ('first_name', 'last_name', 'avatar')}),
+        ('Association', {'fields': ('association',)}),
         ('Type', {'fields': ('user_type',)}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'is_verified', 'groups', 'user_permissions')}),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
@@ -26,7 +49,7 @@ class UserAdmin(BaseUserAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'username', 'first_name', 'last_name', 'user_type', 'password1', 'password2'),
+            'fields': ('email', 'username', 'first_name', 'last_name', 'user_type', 'association', 'password1', 'password2'),
         }),
     )
 

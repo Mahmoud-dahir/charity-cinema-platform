@@ -1,6 +1,7 @@
 """
 Accounts Views
 """
+from django.utils import timezone
 from rest_framework import viewsets, generics, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -9,13 +10,15 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 
-from .models import UserProfile
+from .models import Association, AssociationRequest, UserProfile
 from .serializers import (
     UserSerializer,
     UserRegistrationSerializer,
     UserUpdateSerializer,
     ChangePasswordSerializer,
     UserProfileSerializer,
+    AssociationRequestCreateSerializer,
+    AssociationRequestSerializer,
 )
 
 User = get_user_model()
@@ -164,3 +167,78 @@ class UserProfileViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+class IsStaffUser(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated and request.user.is_staff)
+
+
+class AssociationRequestViewSet(viewsets.ModelViewSet):
+    queryset = AssociationRequest.objects.select_related("requested_by")
+    serializer_class = AssociationRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ["get", "post", "patch", "delete", "options", "head"]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff:
+            return AssociationRequest.objects.all().select_related("requested_by")
+        return AssociationRequest.objects.filter(requested_by=user).select_related("requested_by")
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return AssociationRequestCreateSerializer
+        return AssociationRequestSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(requested_by=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        user = request.user
+        if getattr(user, "association_id", None):
+            return Response({"detail": "User is already attached to an association"}, status=status.HTTP_400_BAD_REQUEST)
+
+        pending = AssociationRequest.objects.filter(requested_by=user, status=AssociationRequest.Status.PENDING).first()
+        if pending:
+            return Response(AssociationRequestSerializer(pending).data, status=status.HTTP_200_OK)
+
+        return super().create(request, *args, **kwargs)
+
+    @action(detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated, IsStaffUser])
+    def approve(self, request, pk=None):
+        association_request: AssociationRequest = self.get_object()
+        if association_request.status != AssociationRequest.Status.PENDING:
+            return Response({"detail": "Only pending requests can be approved"}, status=status.HTTP_400_BAD_REQUEST)
+
+        association = Association.objects.create(
+            name=association_request.name,
+            description=association_request.description,
+            website_url=association_request.website_url,
+        )
+
+        user = association_request.requested_by
+        user.association = association
+        if getattr(user, "user_type", None) != "admin":
+            user.user_type = "admin"
+        user.save(update_fields=["association", "user_type"])
+
+        association_request.status = AssociationRequest.Status.APPROVED
+        association_request.reviewed_at = timezone.now()
+        association_request.review_note = (request.data or {}).get("review_note", "")
+        association_request.save(update_fields=["status", "reviewed_at", "review_note", "updated_at"])
+
+        return Response(AssociationRequestSerializer(association_request).data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated, IsStaffUser])
+    def reject(self, request, pk=None):
+        association_request: AssociationRequest = self.get_object()
+        if association_request.status != AssociationRequest.Status.PENDING:
+            return Response({"detail": "Only pending requests can be rejected"}, status=status.HTTP_400_BAD_REQUEST)
+
+        association_request.status = AssociationRequest.Status.REJECTED
+        association_request.reviewed_at = timezone.now()
+        association_request.review_note = (request.data or {}).get("review_note", "")
+        association_request.save(update_fields=["status", "reviewed_at", "review_note", "updated_at"])
+
+        return Response(AssociationRequestSerializer(association_request).data, status=status.HTTP_200_OK)
