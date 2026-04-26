@@ -292,7 +292,7 @@ export default function Home() {
                   date={formattedDate}
                   location={event.location}
                   imageUrl={event.cover_image || "https://images.unsplash.com/photo-1478720568477-152d9b164e26?q=80&w=500&auto=format&fit=crop"}
-                  tag={event.association ? `Par l'association ${event.association}` : undefined}
+                  tag={event.association_name ? `Par ${event.association_name}` : undefined}
                   hasDetails={true}
                 />
               );

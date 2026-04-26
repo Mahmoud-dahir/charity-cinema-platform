@@ -17,6 +17,7 @@ class EventSerializer(serializers.ModelSerializer):
         queryset=EventCategory.objects.all(),
         required=False,
     )
+    association_name = serializers.CharField(source="association.name", read_only=True)
 
     class Meta:
         model = Event
@@ -36,6 +37,7 @@ class EventSerializer(serializers.ModelSerializer):
             "categories",
             "created_by",
             "association",
+            "association_name",
             "created_at",
             "updated_at",
         ]
