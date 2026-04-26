@@ -3,7 +3,12 @@ Accounts Serializers
 """
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
-from .models import AssociationRequest, User, UserProfile
+from .models import AssociationRequest, User, UserProfile, Association
+
+class AssociationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Association
+        fields = ["id", "name", "description", "website_url", "logo"]
 
 
 class AssociationRequestSerializer(serializers.ModelSerializer):

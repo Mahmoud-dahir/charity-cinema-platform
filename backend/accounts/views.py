@@ -2,6 +2,7 @@
 Accounts Views
 """
 from django.utils import timezone
+from django.db import models
 from rest_framework import viewsets, generics, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -19,6 +20,7 @@ from .serializers import (
     UserProfileSerializer,
     AssociationRequestCreateSerializer,
     AssociationRequestSerializer,
+    AssociationSerializer,
 )
 
 User = get_user_model()
@@ -172,6 +174,19 @@ class UserProfileViewSet(viewsets.ModelViewSet):
 class IsStaffUser(permissions.BasePermission):
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated and request.user.is_staff)
+
+
+class AssociationViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Association.objects.all()
+    serializer_class = AssociationSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        qs = Association.objects.all()
+        q = self.request.query_params.get("q")
+        if q:
+            qs = qs.filter(models.Q(name__icontains=q) | models.Q(description__icontains=q))
+        return qs
 
 
 class AssociationRequestViewSet(viewsets.ModelViewSet):

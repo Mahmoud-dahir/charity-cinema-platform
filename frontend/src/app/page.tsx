@@ -106,6 +106,8 @@ export default function Home() {
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [events, setEvents] = useState<any[]>([]);
+  const [isEventsLoading, setIsEventsLoading] = useState(true);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -121,39 +123,21 @@ export default function Home() {
         setUser(null);
         setIsAuthLoading(false);
       });
+
+    fetch('/api/events')
+      .then(res => res.json())
+      .then(data => {
+        setEvents(Array.isArray(data) ? data : []);
+      })
+      .catch(err => {
+        console.error("Failed to fetch events:", err);
+        setEvents([]);
+      })
+      .finally(() => {
+        setIsEventsLoading(false);
+      });
   }, []);
 
-  const cards = [
-    {
-      title: "Bohemian Rhapsody",
-      date: "Le 10 mars 2026",
-      location: "Place Ambroise Courtois - Lyon 8e",
-      imageUrl: "https://images.unsplash.com/photo-1542204165-65bf26472b9b?q=80&w=500&auto=format&fit=crop",
-      tag: "Par les restos du cœur",
-      hasDetails: true,
-    },
-    { 
-      title: "Le Fabuleux Destin d'Amélie Poulain",
-      date: "Le 15 mars 2026",
-      location: "Parc de la Tête d'Or - Lyon 6e",
-      imageUrl: "https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?q=80&w=500&auto=format&fit=crop",
-      tag: "Croix-Rouge",
-      hasDetails: true,
-    },
-    { 
-      title: "Intouchables",
-      date: "Le 22 mars 2026",
-      location: "Berges du Rhône - Lyon 3e",
-      imageUrl: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=500&auto=format&fit=crop",
-      tag: "Banque Alimentaire",
-      hasDetails: true,
-    },
-    { imageUrl: "https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=500&auto=format&fit=crop" },
-    { imageUrl: "https://images.unsplash.com/photo-1509281373149-e957c6296406?q=80&w=500&auto=format&fit=crop" },
-    { imageUrl: "https://images.unsplash.com/photo-1478720568477-152d9b164e26?q=80&w=500&auto=format&fit=crop" },
-    { imageUrl: "https://images.unsplash.com/photo-1518676590629-3dcbd9c5a5c9?q=80&w=500&auto=format&fit=crop" },
-    { imageUrl: "https://images.unsplash.com/photo-1585647347384-2593bc35786b?q=80&w=500&auto=format&fit=crop" },
-  ];
 
   return (
     <div className="min-h-screen bg-slate-950 font-sans selection:bg-yellow-500 selection:text-slate-900 text-slate-200">
@@ -288,17 +272,32 @@ export default function Home() {
           variants={staggerContainer}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8"
         >
-          {cards.map((card, index) => (
-            <MovieCard 
-              key={index}
-              title={card.title}
-              date={card.date}
-              location={card.location}
-              imageUrl={card.imageUrl}
-              tag={card.tag}
-              hasDetails={card.hasDetails}
-            />
-          ))}
+          {isEventsLoading ? (
+            <div className="col-span-full py-12 flex justify-center">
+              <div className="w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : events.length === 0 ? (
+            <div className="col-span-full py-12 text-center text-slate-400">
+              <p>Aucun événement prévu pour le moment.</p>
+            </div>
+          ) : (
+            events.map((event) => {
+              const dateObj = new Date(event.starts_at);
+              const formattedDate = "Le " + dateObj.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+              
+              return (
+                <MovieCard 
+                  key={event.id}
+                  title={event.movie_title || event.title}
+                  date={formattedDate}
+                  location={event.location}
+                  imageUrl={event.cover_image || "https://images.unsplash.com/photo-1478720568477-152d9b164e26?q=80&w=500&auto=format&fit=crop"}
+                  tag={event.association ? `Par l'association ${event.association}` : undefined}
+                  hasDetails={true}
+                />
+              );
+            })
+          )}
         </motion.div>
       </main>
 
