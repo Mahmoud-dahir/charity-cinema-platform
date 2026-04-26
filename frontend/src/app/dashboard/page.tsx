@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LayoutDashboard, LogOut, Settings, Calendar, Heart, User } from 'lucide-react';
+import { LayoutDashboard, LogOut, Settings, Calendar, Heart, User, Building, Film, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
+import { Sidebar } from '@/components/dashboard/Sidebar';
+import { Header } from '@/components/dashboard/Header';
 
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
@@ -25,11 +27,6 @@ export default function Dashboard() {
       });
   }, [router]);
 
-  async function handleLogout() {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    window.location.href = '/';
-  }
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#fdfaf6] flex items-center justify-center">
@@ -41,52 +38,12 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-[#fdfaf6] font-sans">
       {/* Header */}
-      <header className="bg-[#1a1a1a] text-white py-4 px-6 md:px-12 flex items-center justify-between sticky top-0 z-40">
-        <Link href="/" className="text-2xl font-bold tracking-tight hover:opacity-80 transition-opacity">
-          Nom<span className="text-[#facc15]">Application</span>
-        </Link>
-        <div className="flex items-center space-x-6">
-          <div className="flex items-center space-x-3">
-            <div className="bg-[#333333] text-[#facc15] p-2 rounded-full border border-gray-700">
-              <User className="w-5 h-5" />
-            </div>
-            <span className="text-sm font-medium hidden md:block">{user?.first_name} {user?.last_name}</span>
-          </div>
-          <button 
-            onClick={handleLogout}
-            className="text-gray-400 hover:text-white transition-colors bg-[#333333] p-2 rounded-full border border-gray-700 hover:bg-[#444]"
-            title="Se déconnecter"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
-        </div>
-      </header>
+      <Header user={user} />
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 md:px-12 py-12 flex flex-col md:flex-row gap-8">
         {/* Sidebar */}
-        <aside className="w-full md:w-64 flex-shrink-0">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-28">
-            <nav className="space-y-2">
-              <a href="#" className="flex items-center space-x-3 bg-yellow-50 text-black px-4 py-3 rounded-xl font-bold border border-yellow-100">
-                <LayoutDashboard className="w-5 h-5 text-[#facc15]" />
-                <span>Tableau de bord</span>
-              </a>
-              <a href="#" className="flex items-center space-x-3 text-gray-500 hover:bg-gray-50 hover:text-black px-4 py-3 rounded-xl font-medium transition-colors">
-                <Calendar className="w-5 h-5" />
-                <span>Mes réservations</span>
-              </a>
-              <a href="#" className="flex items-center space-x-3 text-gray-500 hover:bg-gray-50 hover:text-black px-4 py-3 rounded-xl font-medium transition-colors">
-                <Heart className="w-5 h-5" />
-                <span>Favoris</span>
-              </a>
-              <a href="#" className="flex items-center space-x-3 text-gray-500 hover:bg-gray-50 hover:text-black px-4 py-3 rounded-xl font-medium transition-colors">
-                <Settings className="w-5 h-5" />
-                <span>Paramètres</span>
-              </a>
-            </nav>
-          </div>
-        </aside>
+        <Sidebar user={user} />
 
         {/* Content Area */}
         <main className="flex-1">

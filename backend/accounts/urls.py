@@ -10,12 +10,14 @@ from .views import (
     UserViewSet,
     UserProfileViewSet,
     AssociationRequestViewSet,
+    AssociationViewSet,
 )
 
 router = DefaultRouter()
 router.register(r'users', UserViewSet, basename='user')
 router.register(r'profiles', UserProfileViewSet, basename='userprofile')
 router.register(r'association-requests', AssociationRequestViewSet, basename='associationrequest')
+router.register(r'associations', AssociationViewSet, basename='association')
 
 urlpatterns = [
     # Authentication
