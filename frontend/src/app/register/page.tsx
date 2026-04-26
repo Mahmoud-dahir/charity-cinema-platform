@@ -170,7 +170,7 @@ export default function RegisterModal({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="password" className="text-sm font-medium text-gray-700">Mot de passe*</label>
+              <label htmlFor="password2" className="text-sm font-medium text-gray-700">Mot de passe*</label>
               <div className="relative">
                 <input
                   id="password"
