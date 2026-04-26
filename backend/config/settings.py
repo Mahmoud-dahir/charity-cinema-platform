@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "api",
     "events.apps.EventsConfig",
     "interactions.apps.InteractionsConfig",
+    "dashboard.apps.DashboardConfig",
 ]
 
 MIDDLEWARE = [
