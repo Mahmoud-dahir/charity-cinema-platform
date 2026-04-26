@@ -6,5 +6,8 @@ export function getBackendBaseUrl() {
 }
 
 export function isProd() {
-  return process.env.NODE_ENV === "production"
+  if (typeof window !== "undefined") {
+    return window.location.protocol === "https:"
+  }
+  return process.env.NODE_ENV === "production" && process.env.PROTOCOL === "https"
 }

@@ -25,7 +25,7 @@ SECRET_KEY = "django-insecure-v+k)=k6h=_$1gf7b+@i9yr&n&d33l$t%u_vk^u&^4_ax@(aa!g
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "192.168.75.115"]
 
 
 # Application definition
@@ -133,6 +133,15 @@ MEDIA_ROOT = BASE_DIR / "media"
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://192.168.75.115:3000",
+    "http://192.168.75.115",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://192.168.75.115:3000",
+    "http://192.168.75.115",
 ]
 
 # Default primary key field type
