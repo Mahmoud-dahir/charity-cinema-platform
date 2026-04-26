@@ -14,7 +14,11 @@ export async function GET(request: Request) {
     headers.Authorization = `Bearer ${accessToken}`
   }
 
-  const res = await fetch(`${getBackendBaseUrl()}/api/events/?${searchParams.toString()}`, {
+  const baseUrl = `${getBackendBaseUrl()}/api/events/`
+  const queryString = searchParams.toString()
+  const finalUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl
+
+  const res = await fetch(finalUrl, {
     method: "GET",
     headers,
     cache: "no-store",

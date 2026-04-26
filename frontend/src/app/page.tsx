@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Search, User, SlidersHorizontal, Heart, LayoutDashboard, Calendar, MapPin, Play, Ticket, Mail, ChevronRight } from 'lucide-react';
+import { Search, User, SlidersHorizontal, Heart, LayoutDashboard, Calendar, MapPin, Play, Ticket, Mail, ChevronRight, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { motion, Variants } from 'framer-motion';
 import LoginModal from './login/page';
 import RegisterModal from './register/page';
-// import { Facebook, Twitter, Instagram, Youtube } from 'lucide-react';
+import { EventDrawer } from '@/components/events/EventDrawer';
 
 const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 30 },
@@ -29,18 +29,29 @@ const MovieCard = ({
   location, 
   imageUrl, 
   tag, 
-  hasDetails 
+  hasDetails,
+  favoritesCount,
+  commentsCount,
+  isFavorited,
+  onFavoriteClick,
+  onDetailsClick,
+  onReserveClick,
 }: { 
   title?: string, 
   date?: string, 
   location?: string, 
   imageUrl: string, 
   tag?: string,
-  hasDetails?: boolean 
+  hasDetails?: boolean,
+  favoritesCount?: number,
+  commentsCount?: number,
+  isFavorited?: boolean,
+  onFavoriteClick?: () => void,
+  onDetailsClick?: () => void,
+  onReserveClick?: () => void,
 }) => {
   return (
-    <motion.div 
-      variants={fadeInUp}
+    <div 
       className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden flex flex-col h-full shadow-lg hover:shadow-2xl hover:border-yellow-500/30 hover:-translate-y-2 transition-all duration-300 group relative"
     >
       <div 
@@ -64,7 +75,7 @@ const MovieCard = ({
       <div className="p-5 flex flex-col flex-grow justify-between relative bg-slate-900 z-10 -mt-6 rounded-t-2xl">
         {hasDetails ? (
           <>
-            <div className="mb-5">
+            <div className="mb-4">
               <h3 className="font-extrabold text-white text-xl leading-snug mb-3 group-hover:text-yellow-400 transition-colors drop-shadow-sm line-clamp-2">{title}</h3>
               <div className="space-y-2.5">
                 <div className="flex items-center text-slate-300">
@@ -78,14 +89,39 @@ const MovieCard = ({
               </div>
             </div>
             
+            {/* Interaction counts */}
+            <div className="flex gap-3 mb-3 text-slate-500 text-xs">
+              <span className="flex items-center gap-1">
+                <Heart className={`w-3.5 h-3.5 ${isFavorited ? 'fill-red-400 text-red-400' : ''}`} />
+                {favoritesCount ?? 0}
+              </span>
+              <span className="flex items-center gap-1">
+                <MessageCircle className="w-3.5 h-3.5" />
+                {commentsCount ?? 0}
+              </span>
+            </div>
+            
             <div className="flex gap-2 items-center mt-auto pt-4 border-t border-slate-800/80">
-              <button className="bg-slate-800 p-2.5 rounded-xl flex items-center justify-center hover:bg-slate-700 transition-colors text-slate-400 hover:text-red-500 group/heart border border-slate-700/50 shrink-0">
-                <Heart className="w-5 h-5 group-hover/heart:fill-red-500 transition-all" />
+              <button 
+                onClick={onFavoriteClick}
+                className={`p-2.5 rounded-xl flex items-center justify-center transition-colors border shrink-0 ${
+                  isFavorited
+                    ? 'bg-red-500/20 border-red-500/50 text-red-400'
+                    : 'bg-slate-800 border-slate-700/50 text-slate-400 hover:text-red-400 hover:border-red-500/30'
+                }`}
+              >
+                <Heart className={`w-5 h-5 ${isFavorited ? 'fill-red-400' : 'group-hover/heart:fill-red-500'} transition-all`} />
               </button>
-              <button className="bg-transparent border border-slate-700 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-300 hover:border-slate-500 hover:text-white transition-colors flex-1 text-center">
+              <button 
+                onClick={onDetailsClick}
+                className="bg-transparent border border-slate-700 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-300 hover:border-slate-500 hover:text-white transition-colors flex-1 text-center"
+              >
                 Détails
               </button>
-              <button className="bg-yellow-500 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-900 hover:bg-yellow-400 hover:shadow-[0_0_15px_rgba(234,179,8,0.4)] transition-all flex-1 text-center flex items-center justify-center">
+              <button 
+                onClick={onReserveClick}
+                className="bg-yellow-500 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-900 hover:bg-yellow-400 hover:shadow-[0_0_15px_rgba(234,179,8,0.4)] transition-all flex-1 text-center flex items-center justify-center"
+              >
                 <Ticket className="w-4 h-4 mr-1.5" />
                 Réserver
               </button>
@@ -97,7 +133,7 @@ const MovieCard = ({
           </div>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 };
 
@@ -108,6 +144,9 @@ export default function Home() {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [events, setEvents] = useState<any[]>([]);
   const [isEventsLoading, setIsEventsLoading] = useState(true);
+  const [favoritedIds, setFavoritedIds] = useState<Set<string>>(new Set());
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -125,9 +164,23 @@ export default function Home() {
       });
 
     fetch('/api/events')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+      })
       .then(data => {
-        setEvents(Array.isArray(data) ? data : []);
+        console.log("Fetched events:", data);
+        const evts = Array.isArray(data) ? data : [];
+        setEvents(evts);
+        
+        fetch('/api/events?favorited=true')
+          .then(res => res.json())
+          .then(favs => {
+            if (Array.isArray(favs)) {
+              setFavoritedIds(new Set(favs.map((f: any) => f.id)));
+            }
+          })
+          .catch(() => {});
       })
       .catch(err => {
         console.error("Failed to fetch events:", err);
@@ -265,13 +318,7 @@ export default function Home() {
           </Link>
         </div>
         
-        <motion.div 
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-          variants={staggerContainer}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8"
-        >
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
           {isEventsLoading ? (
             <div className="col-span-full py-12 flex justify-center">
               <div className="w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
@@ -284,6 +331,20 @@ export default function Home() {
             events.map((event) => {
               const dateObj = new Date(event.starts_at);
               const formattedDate = "Le " + dateObj.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+              const isFav = favoritedIds.has(event.id);
+              
+              const handleFavClick = async () => {
+                if (!user) { setIsLoginModalOpen(true); return; }
+                const method = isFav ? "DELETE" : "POST";
+                const res = await fetch(`/api/events/${event.id}/favorite`, { method });
+                if (res.ok || res.status === 204) {
+                  setFavoritedIds(prev => {
+                    const next = new Set(prev);
+                    isFav ? next.delete(event.id) : next.add(event.id);
+                    return next;
+                  });
+                }
+              };
               
               return (
                 <MovieCard 
@@ -294,12 +355,27 @@ export default function Home() {
                   imageUrl={event.cover_image || "https://images.unsplash.com/photo-1478720568477-152d9b164e26?q=80&w=500&auto=format&fit=crop"}
                   tag={event.association_name ? `Par ${event.association_name}` : undefined}
                   hasDetails={true}
+                  favoritesCount={event.favorites_count}
+                  commentsCount={event.comments_count}
+                  isFavorited={isFav}
+                  onFavoriteClick={handleFavClick}
+                  onDetailsClick={() => { setSelectedEvent(event); setIsDrawerOpen(true); }}
+                  onReserveClick={() => { setSelectedEvent(event); setIsDrawerOpen(true); }}
                 />
               );
             })
           )}
-        </motion.div>
+        </div>
       </main>
+
+      {/* Event Drawer */}
+      <EventDrawer
+        event={selectedEvent}
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        user={user}
+        onLoginRequired={() => { setIsDrawerOpen(false); setIsLoginModalOpen(true); }}
+      />
 
       {/* Newsletter / CTA Section */}
       <section className="border-t border-slate-900 bg-slate-900/50 mt-12 py-16 lg:py-24">

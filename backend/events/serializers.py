@@ -18,6 +18,9 @@ class EventSerializer(serializers.ModelSerializer):
         required=False,
     )
     association_name = serializers.CharField(source="association.name", read_only=True)
+    favorites_count = serializers.IntegerField(read_only=True)
+    comments_count = serializers.IntegerField(read_only=True)
+    signups_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Event
@@ -38,6 +41,9 @@ class EventSerializer(serializers.ModelSerializer):
             "created_by",
             "association",
             "association_name",
+            "favorites_count",
+            "comments_count",
+            "signups_count",
             "created_at",
             "updated_at",
         ]

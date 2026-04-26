@@ -26,7 +26,7 @@ export default function EventsDashboardPage() {
           return;
         }
         setUser(user);
-        return fetch("/api/events");
+        return fetch("/api/dashboard/events");
       })
       .then((res) => {
         if (!res) return;

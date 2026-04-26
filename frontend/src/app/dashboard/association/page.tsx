@@ -87,10 +87,17 @@ export default function AssociationPage() {
               <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Building className="w-10 h-10 text-green-500" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Vous êtes déjà rattaché à une association !</h3>
-              <p className="text-gray-500 max-w-md mx-auto mb-8">Vous pouvez désormais créer et publier des événements.</p>
+              <h3 className="text-xl font-bold text-gray-900 mb-1">
+                {user.association_name || "Association"}
+              </h3>
+              <p className="text-sm font-medium text-green-600 mb-6 bg-green-50 inline-block px-3 py-1 rounded-full border border-green-100">
+                Vous êtes membre de cette association
+              </p>
+              <p className="text-gray-500 max-w-md mx-auto mb-8">
+                Vous pouvez désormais créer et publier des événements au nom de votre association.
+              </p>
               <Link href="/dashboard/events" className="inline-block bg-[#facc15] hover:bg-yellow-500 text-black font-bold py-3 px-8 rounded-full transition-colors shadow-sm">
-                Gérer mes événements
+                Gérer les événements
               </Link>
             </div>
           ) : currentRequest ? (
