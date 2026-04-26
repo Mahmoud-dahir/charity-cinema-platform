@@ -8,4 +8,5 @@ urlpatterns = [
     path("accounts/", include("accounts.urls")),
     path("", include("events.urls")),
     path("", include("interactions.urls")),
+    path("dashboard/", include("dashboard.urls")),
 ]
