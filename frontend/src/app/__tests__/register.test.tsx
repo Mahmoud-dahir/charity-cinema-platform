@@ -22,7 +22,6 @@ describe('RegisterModal Component', () => {
     fireEvent.change(screen.getByLabelText(/^Prénom\*/i), { target: { value: 'John' } });
     fireEvent.change(screen.getByLabelText(/^Email\*/i), { target: { value: 'new@exemple.com' } });
     
-    // On cible les deux champs mot de passe via leurs points de masquage
     const passwordInputs = screen.getAllByPlaceholderText('••••••••••••');
     fireEvent.change(passwordInputs[0], { target: { value: 'pass123' } });
     fireEvent.change(passwordInputs[1], { target: { value: 'pass123' } });
