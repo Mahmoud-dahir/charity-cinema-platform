@@ -25,6 +25,8 @@ interface Event {
   favorites_count: number;
   comments_count: number;
   signups_count: number;
+  is_favorited: boolean;
+  is_signed_up: boolean;
 }
 
 interface EventDrawerProps {
@@ -49,11 +51,11 @@ export function EventDrawer({ event, isOpen, onClose, user, onLoginRequired }: E
   useEffect(() => {
     if (!event || !isOpen) return;
     setLocalFavCount(event.favorites_count);
-    setIsFavorited(false);
-    setIsSignedUp(false);
+    setIsFavorited(event.is_favorited);
+    setIsSignedUp(event.is_signed_up);
     setComments([]);
 
-    fetch(`/api/events/${event.id}/comments`)
+    fetch(`/api/events/${event.id}/comments/`)
       .then(res => res.json())
       .then(data => setComments(Array.isArray(data) ? data : []))
       .catch(() => {});
@@ -74,7 +76,7 @@ export function EventDrawer({ event, isOpen, onClose, user, onLoginRequired }: E
     setIsTogglingFav(true);
     const method = isFavorited ? "DELETE" : "POST";
     try {
-      const res = await fetch(`/api/events/${event.id}/favorite`, { method });
+      const res = await fetch(`/api/events/${event.id}/favorite/`, { method });
       if (res.ok || res.status === 204) {
         setIsFavorited(!isFavorited);
         setLocalFavCount(prev => isFavorited ? prev - 1 : prev + 1);
@@ -86,11 +88,12 @@ export function EventDrawer({ event, isOpen, onClose, user, onLoginRequired }: E
 
   const handleSignup = async () => {
     if (!user) { onLoginRequired(); return; }
-    if (isSigningUp || isSignedUp || !event) return;
+    if (isSigningUp || !event) return;
     setIsSigningUp(true);
+    const method = isSignedUp ? "DELETE" : "POST";
     try {
-      const res = await fetch(`/api/events/${event.id}/signup`, { method: "POST" });
-      if (res.ok) setIsSignedUp(true);
+      const res = await fetch(`/api/events/${event.id}/signup/`, { method });
+      if (res.ok || res.status === 204) setIsSignedUp(!isSignedUp);
     } catch {} finally {
       setIsSigningUp(false);
     }
@@ -102,7 +105,7 @@ export function EventDrawer({ event, isOpen, onClose, user, onLoginRequired }: E
     if (!newComment.trim() || isSubmittingComment || !event) return;
     setIsSubmittingComment(true);
     try {
-      const res = await fetch(`/api/events/${event.id}/comments`, {
+      const res = await fetch(`/api/events/${event.id}/comments/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ body: newComment.trim() }),
@@ -213,15 +216,15 @@ export function EventDrawer({ event, isOpen, onClose, user, onLoginRequired }: E
               </button>
               <button
                 onClick={handleSignup}
-                disabled={isSigningUp || isSignedUp}
+                disabled={isSigningUp}
                 className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${
                   isSignedUp
-                    ? "bg-green-500/20 border border-green-500/50 text-green-400"
+                    ? "bg-green-500/20 border border-green-500/50 text-green-400 hover:bg-green-500/30"
                     : "bg-yellow-500 text-slate-900 hover:bg-yellow-400 hover:shadow-[0_0_20px_rgba(234,179,8,0.3)]"
                 }`}
               >
                 <Ticket className="w-4 h-4" />
-                {isSigningUp ? "Inscription..." : isSignedUp ? "Déjà inscrit ✓" : "Réserver ma place"}
+                {isSigningUp ? "Chargement..." : isSignedUp ? "Déjà inscrit" : "S'inscrire à l'événement"}
               </button>
             </div>
 

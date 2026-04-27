@@ -10,6 +10,7 @@ import { Header } from '@/components/dashboard/Header';
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [inscriptionsCount, setInscriptionsCount] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -20,6 +21,11 @@ export default function Dashboard() {
       })
       .then(data => {
         setUser(data);
+        return fetch('/api/events?signedup=true');
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setInscriptionsCount(data.length);
         setIsLoading(false);
       })
       .catch(() => {
@@ -54,8 +60,8 @@ export default function Dashboard() {
               <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
                 <Calendar className="w-6 h-6 text-[#facc15]" />
               </div>
-              <h3 className="text-gray-500 font-medium text-sm">Réservations actives</h3>
-              <p className="text-3xl font-bold text-[#1a1a1a] mt-1">0</p>
+              <h3 className="text-gray-500 font-medium text-sm">Inscriptions actives</h3>
+              <p className="text-3xl font-bold text-[#1a1a1a] mt-1">{inscriptionsCount}</p>
             </div>
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
               <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
@@ -70,7 +76,7 @@ export default function Dashboard() {
             <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
               <Calendar className="w-10 h-10 text-gray-300" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Aucune réservation récente</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Aucune inscription récente</h3>
             <p className="text-gray-500 max-w-md mx-auto mb-8">Vous n'avez pas encore participé à des séances solidaires. Explorez les films à l'affiche pour vous engager.</p>
             <Link href="/" className="inline-block bg-[#facc15] hover:bg-yellow-500 text-black font-bold py-3 px-8 rounded-full transition-colors shadow-sm">
               Découvrir les films

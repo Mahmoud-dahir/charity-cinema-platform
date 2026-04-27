@@ -36,11 +36,7 @@ class IsAssociationEditor(permissions.BasePermission):
 
 
 class EventViewSet(viewsets.ModelViewSet):
-	queryset = Event.objects.annotate(
-			favorites_count=models.Count("favorites", distinct=True),
-			comments_count=models.Count("comments", distinct=True),
-			signups_count=models.Count("signups", distinct=True),
-		)
+	queryset = Event.objects.all()
 	serializer_class = EventSerializer
 
 	def get_permissions(self):
@@ -57,7 +53,23 @@ class EventViewSet(viewsets.ModelViewSet):
 		return [IsAssociationEditor()]
 
 	def get_queryset(self):
-		qs = super().get_queryset()
+		user = self.request.user
+		qs = Event.objects.annotate(
+			favorites_count=models.Count("favorites", distinct=True),
+			comments_count=models.Count("comments", distinct=True),
+			signups_count=models.Count("signups", distinct=True),
+		)
+
+		if user and user.is_authenticated:
+			qs = qs.annotate(
+				is_favorited=models.Exists(Favorite.objects.filter(user=user, event=models.OuterRef("pk"))),
+				is_signed_up=models.Exists(Signup.objects.filter(user=user, event=models.OuterRef("pk"))),
+			)
+		else:
+			qs = qs.annotate(
+				is_favorited=models.Value(False, output_field=models.BooleanField()),
+				is_signed_up=models.Value(False, output_field=models.BooleanField()),
+			)
 
 		if self.action in ["list", "retrieve", "signup", "favorite", "comments"]:
 			user = self.request.user
@@ -112,6 +124,10 @@ class EventViewSet(viewsets.ModelViewSet):
 		favorited = self.request.query_params.get("favorited")
 		if favorited == "true" and self.request.user and self.request.user.is_authenticated:
 			qs = qs.filter(favorites__user=self.request.user)
+
+		signedup = self.request.query_params.get("signedup")
+		if signedup == "true" and self.request.user and self.request.user.is_authenticated:
+			qs = qs.filter(signups__user=self.request.user)
 
 		return qs.distinct()
 
