@@ -2,11 +2,20 @@
 
 if (typeof global.Request === 'undefined') {
   (global as any).Request = class Request {
-    url: string; method: string; bodyText: string;
+    url: string; method: string; bodyText: string; headers: { get: (key: string) => string | null };
     constructor(input: string, init?: any) {
       this.url = input; this.method = init?.method || 'GET'; this.bodyText = init?.body || '{}';
+      const rawHeaders = init?.headers || {};
+      const lowerHeaders: Record<string, string> = {};
+      for (const [k, v] of Object.entries(rawHeaders)) {
+        lowerHeaders[k.toLowerCase()] = v as string;
+      }
+      this.headers = {
+        get: (key: string) => lowerHeaders[key.toLowerCase()] || null
+      };
     }
     async json() { return JSON.parse(this.bodyText); }
+    async formData() { return new FormData(); }
   };
 }
 if (typeof global.Response === 'undefined') {
