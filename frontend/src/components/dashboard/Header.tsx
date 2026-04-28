@@ -2,13 +2,15 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Play, Search, User, LogOut, Film, Building, MapPin } from "lucide-react";
+import { Play, Search, User, LogOut, Film, Building, MapPin, LayoutDashboard } from "lucide-react";
 
 interface HeaderProps {
   user: any;
+  onLoginClick?: () => void;
+  isAuthLoading?: boolean;
 }
 
-export function Header({ user }: HeaderProps) {
+export function Header({ user, onLoginClick, isAuthLoading }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -165,17 +167,17 @@ export function Header({ user }: HeaderProps) {
         )}
       </div>
 
-      <div className="flex items-center space-x-4">
-        {user ? (
-          <>
-            <div className="flex items-center space-x-3">
-              <div className="bg-yellow-500 text-slate-900 p-2 rounded-full shadow-[0_0_10px_rgba(234,179,8,0.2)]">
-                <User className="w-4 h-4 md:w-4 md:h-4" />
+      <div className="flex items-center space-x-3 md:space-x-4">
+        {isAuthLoading ? (
+          <div className="w-24 md:w-32 h-9 bg-slate-800 animate-pulse rounded-full"></div>
+        ) : user ? (
+          <div className="flex items-center space-x-3 md:space-x-4">
+            <Link href="/dashboard" className="flex items-center space-x-2 md:space-x-3 cursor-pointer group">
+              <div className="bg-yellow-500 text-slate-900 p-2 rounded-full group-hover:bg-yellow-400 transition-colors shadow-[0_0_10px_rgba(234,179,8,0.2)]">
+                <LayoutDashboard className="w-4 h-4" />
               </div>
-              <span className="text-sm font-semibold hidden md:block text-slate-300">
-                {user.first_name} {user.last_name}
-              </span>
-            </div>
+              <span className="text-xs md:text-sm font-semibold hover:text-white hidden sm:block transition-colors text-slate-300">Mon Espace</span>
+            </Link>
             
             <button 
               onClick={handleLogout}
@@ -184,10 +186,20 @@ export function Header({ user }: HeaderProps) {
             >
               <LogOut className="w-4 h-4 md:w-5 md:h-5" />
             </button>
-          </>
+          </div>
         ) : (
-          <div className="w-32 h-9 bg-slate-800 animate-pulse rounded-full"></div>
+          <div 
+            className="flex items-center space-x-2 md:space-x-3 cursor-pointer group bg-slate-900 rounded-full pr-4 p-1 border border-slate-800 hover:border-slate-700 transition-colors"
+            onClick={onLoginClick}
+          >
+            <div className="bg-yellow-500 text-slate-900 p-1.5 md:p-2 rounded-full group-hover:bg-yellow-400 transition-transform hover:scale-105 active:scale-95 shadow-sm">
+              <User className="w-4 h-4" />
+            </div>
+            <span className="text-xs md:text-sm font-semibold text-slate-300 group-hover:text-white hidden sm:block transition-colors">S'identifier</span>
+          </div>
         )}
+        
+
       </div>
     </header>
   );

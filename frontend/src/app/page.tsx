@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Search, User, SlidersHorizontal, Heart, LayoutDashboard, Calendar, MapPin, Play, Ticket, Mail, ChevronRight, MessageCircle, Users } from 'lucide-react';
+import { Heart, Calendar, MapPin, Play, Ticket, Mail, ChevronRight, MessageCircle, Users } from 'lucide-react';
 import Link from 'next/link';
 import { motion, Variants } from 'framer-motion';
 import LoginModal from './login/page';
 import RegisterModal from './register/page';
+import { Header } from '@/components/dashboard/Header';
+import { EventsList } from '@/components/events/EventsList';
 import { EventDrawer } from '@/components/events/EventDrawer';
 import ReservationModal from '@/components/events/ReservationModal';
 import { CheckCircle2 } from 'lucide-react';
@@ -26,118 +28,6 @@ const staggerContainer: Variants = {
   }
 };
 
-const MovieCard = ({ 
-  event,
-  hasDetails,
-  favoritesCount,
-  commentsCount,
-  isFavorited,
-  onFavoriteClick,
-  onDetailsClick,
-  onSignupClick,
-  isSignedUp,
-}: { 
-  event: any, 
-  hasDetails?: boolean, 
-  favoritesCount?: number,
-  commentsCount?: number,
-  isFavorited?: boolean,
-  onFavoriteClick?: () => void,
-  onDetailsClick?: () => void,
-  onSignupClick?: () => void,
-  isSignedUp?: boolean,
-}) => {
-  return (
-    <div 
-      className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden flex flex-col h-full shadow-lg hover:shadow-2xl hover:border-yellow-500/30 hover:-translate-y-2 transition-all duration-300 group relative"
-    >
-      <div 
-        className="w-full h-64 sm:h-72 bg-slate-800 bg-cover bg-center relative overflow-hidden"
-        style={{ backgroundImage: `url(${event.cover_image || "https://images.unsplash.com/photo-1478720568477-152d9b164e26?q=80&w=500&auto=format&fit=crop"})` }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-90 group-hover:opacity-60 transition-opacity duration-300"></div>
-        {event.association_name && (
-          <div className="absolute top-4 left-4 bg-yellow-500 px-3 py-1.5 rounded-full shadow-lg flex items-center space-x-1.5 z-10">
-            <Heart className="w-3.5 h-3.5 text-slate-900 fill-slate-900" />
-            <span className="text-[10px] sm:text-xs font-bold text-slate-900 tracking-wider uppercase">{`Par ${event.association_name}`}</span>
-          </div>
-        )}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
-          <div className="bg-yellow-500/90 p-4 rounded-full text-slate-900 transform scale-75 group-hover:scale-100 transition-transform duration-300 backdrop-blur-sm shadow-[0_0_30px_rgba(234,179,8,0.5)]">
-            <Play className="w-6 h-6 fill-slate-900" />
-          </div>
-        </div>
-      </div>
-      
-      <div className="p-5 flex flex-col flex-grow justify-between relative bg-slate-900 z-10 -mt-6 rounded-t-2xl">
-        {hasDetails ? (
-          <>
-            <div className="mb-4">
-              <h3 className="font-extrabold text-white text-xl leading-snug mb-3 group-hover:text-yellow-400 transition-colors drop-shadow-sm line-clamp-2">{event.movie_title || event.title}</h3>
-              <div className="space-y-2.5">
-                <div className="flex items-center text-slate-300">
-                  <Calendar className="w-4 h-4 mr-2.5 text-yellow-500" />
-                  <p className="text-sm font-medium">{"Le " + new Date(event.starts_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</p>
-                </div>
-                <div className="flex items-start text-slate-400">
-                  <MapPin className="w-4 h-4 mr-2.5 text-yellow-500 shrink-0 mt-0.5" />
-                  <p className="text-sm line-clamp-2">{event.location}</p>
-                </div>
-                {event.capacity && (
-                  <div className="flex items-center text-slate-400">
-                    <Users className="w-4 h-4 mr-2.5 text-yellow-500" />
-                    <p className="text-sm">{event.signups_count || 0} / {event.capacity} places</p>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <div className="flex gap-3 mb-3 text-slate-500 text-xs">
-              <span className="flex items-center gap-1">
-                <Heart className={`w-3.5 h-3.5 ${isFavorited ? 'fill-red-400 text-red-400' : ''}`} />
-                {favoritesCount ?? 0}
-              </span>
-              <span className="flex items-center gap-1">
-                <MessageCircle className="w-3.5 h-3.5" />
-                {commentsCount ?? 0}
-              </span>
-            </div>
-            
-            <div className="flex gap-2 items-center mt-auto pt-4 border-t border-slate-800/80">
-              <button 
-                onClick={onFavoriteClick}
-                className={`p-2.5 rounded-xl flex items-center justify-center transition-colors border shrink-0 ${
-                  isFavorited
-                    ? 'bg-red-500/20 border-red-500/50 text-red-400'
-                    : 'bg-slate-800 border-slate-700/50 text-slate-400 hover:text-red-400 hover:border-red-500/30'
-                }`}
-              >
-                <Heart className={`w-5 h-5 ${isFavorited ? 'fill-red-400' : 'group-hover/heart:fill-red-500'} transition-all`} />
-              </button>
-              <button 
-                onClick={onDetailsClick}
-                className="bg-transparent border border-slate-700 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-300 hover:border-slate-500 hover:text-white transition-colors flex-1 text-center"
-              >
-                Détails
-              </button>
-              <button 
-                onClick={onSignupClick}
-                className={`${isSignedUp ? 'bg-green-500 hover:bg-green-400' : 'bg-yellow-500 hover:bg-yellow-400'} px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-900 transition-all flex-1 text-center flex items-center justify-center`}
-              >
-                {isSignedUp ? <CheckCircle2 className="w-4 h-4 mr-1.5" /> : <Ticket className="w-4 h-4 mr-1.5" />}
-                {isSignedUp ? 'Inscrit' : "S'inscrire"}
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="flex h-full items-center justify-center py-8">
-            <p className="text-slate-500 text-sm font-medium italic">Programmations à venir...</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
 
 export default function Home() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -150,9 +40,6 @@ export default function Home() {
   const [signedUpIds, setSignedUpIds] = useState<Set<any>>(new Set());
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
-  const [eventForSignup, setEventForSignup] = useState<any>(null);
-  const [isSigningUp, setIsSigningUp] = useState(false);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -189,35 +76,6 @@ export default function Home() {
       });
   }, []);
 
-  async function handleConfirmSignup(event: any, isCancel = false) {
-    if (!event) return;
-    setIsSigningUp(true);
-    try {
-      const method = isCancel ? "DELETE" : "POST";
-      const res = await fetch(`/api/events/${event.id}/signup/`, { method });
-      
-      if (res.ok || res.status === 204) {
-        setSignedUpIds(prev => {
-          const next = new Set(prev);
-          isCancel ? next.delete(event.id) : next.add(event.id);
-          return next;
-        });
-        setEvents(prev => prev.map(e =>
-          e.id === event.id
-            ? { ...e, signups_count: e.signups_count + (isCancel ? -1 : 1) }
-            : e
-        ));
-        setIsSignupModalOpen(false);
-      } else {
-        const data = await res.json().catch(() => ({}));
-        alert(data.detail || "Une erreur est survenue");
-      }
-    } catch (err) {
-      alert("Une erreur est survenue");
-    } finally {
-      setIsSigningUp(false);
-    }
-  }
 
   const handleFavorite = async (event: any) => {
     if (!user) { setIsLoginModalOpen(true); return; }
@@ -257,52 +115,11 @@ export default function Home() {
         }}
       />
 
-      <header className="bg-slate-950/80 backdrop-blur-md text-white py-4 px-4 md:px-8 lg:px-12 flex flex-wrap items-center justify-between gap-y-4 gap-x-6 sticky top-0 z-50 border-b border-slate-800 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
-        <Link href="/" className="text-2xl font-bold tracking-tight hover:opacity-90 transition-opacity flex items-center">
-          <Play className="w-5 h-5 mr-2 text-yellow-500 fill-yellow-500" />
-          Cinem<span className="text-yellow-500">Action</span>
-        </Link>
-        
-        <div className="relative w-full md:flex-1 max-w-xl order-last md:order-none hidden sm:block">
-          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-            <Search className="h-4 w-4 text-slate-500" />
-          </div>
-          <input
-            type="text"
-            placeholder="Rechercher un film, un lieu, une asso..."
-            className="w-full bg-slate-900/50 border border-slate-700/50 text-white rounded-full py-2 pl-11 pr-6 focus:outline-none focus:border-yellow-500/50 focus:ring-1 focus:ring-yellow-500/50 transition-all placeholder-slate-500 text-sm"
-          />
-        </div>
-
-        <div className="flex items-center space-x-3 md:space-x-4">
-          {isAuthLoading ? (
-            <div className="w-24 md:w-32 h-9 bg-slate-800 animate-pulse rounded-full"></div>
-          ) : user ? (
-            <Link href="/dashboard" className="flex items-center space-x-2 md:space-x-3 cursor-pointer group">
-              <div className="bg-yellow-500 text-slate-900 p-2 rounded-full group-hover:bg-yellow-400 transition-colors shadow-[0_0_10px_rgba(234,179,8,0.2)]">
-                <LayoutDashboard className="w-4 h-4 md:w-4 md:h-4" />
-              </div>
-              <span className="text-xs md:text-sm font-semibold hover:text-white hidden sm:block transition-colors text-slate-300">Mon Espace</span>
-            </Link>
-          ) : (
-            <div 
-              className="flex items-center space-x-2 md:space-x-3 cursor-pointer group bg-slate-900 rounded-full pr-4 p-1 border border-slate-800 hover:border-slate-700 transition-colors"
-              onClick={() => setIsLoginModalOpen(true)}
-            >
-              <div className="bg-yellow-500 text-slate-900 p-1.5 md:p-2 rounded-full group-hover:bg-yellow-400 transition-transform hover:scale-105 active:scale-95 shadow-sm">
-                <User className="w-4 h-4" />
-              </div>
-              <span className="text-xs md:text-sm font-semibold text-slate-300 group-hover:text-white hidden sm:block transition-colors">S'identifier</span>
-            </div>
-          )}
-          
-          <div className="flex items-center cursor-pointer group">
-            <div className="bg-slate-900 text-slate-400 hover:text-white p-2.5 rounded-full group-hover:bg-slate-800 transition-all border border-slate-800 hover:border-slate-700">
-              <SlidersHorizontal className="w-4 h-4 md:w-5 md:h-5" />
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header 
+        user={user} 
+        isAuthLoading={isAuthLoading} 
+        onLoginClick={() => setIsLoginModalOpen(true)} 
+      />
 
       <section 
         className="relative h-[400px] md:h-[550px] bg-cover bg-center flex items-center overflow-hidden"
@@ -349,65 +166,33 @@ export default function Home() {
         </ul>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-8 md:py-12 relative z-0">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 md:mb-12 gap-4 sm:hidden">
-          <div>
-            <h2 className="text-white text-2xl md:text-3xl font-extrabold tracking-tight mb-2">Séances en salle</h2>
-            <p className="text-slate-400 font-medium text-sm">Faites une bonne action avec chaque visionnage.</p>
-          </div>
-          <Link href="/events" className="text-yellow-500 font-bold text-sm hover:text-yellow-400 transition-colors pb-1 w-fit group flex items-center">
-            Voir tout l'agenda <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-          </Link>
-        </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
-          {isEventsLoading ? (
-            <div className="col-span-full py-12 flex justify-center">
-              <div className="w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
-            </div>
-          ) : events.length === 0 ? (
-            <div className="col-span-full py-12 text-center text-slate-400">
-              <p>Aucun événement prévu pour le moment.</p>
-            </div>
-          ) : (
-            events.map((event) => {
-              const isSignedUp = signedUpIds.has(event.id);
-              const handleSignupClick = () => {
-                if (!user) { setIsLoginModalOpen(true); return; }
-                if (isSignedUp) {
-                  handleConfirmSignup(event, true);
-                } else {
-                  setEventForSignup(event);
-                  setIsSignupModalOpen(true);
-                }
-              };
-              
-              return (
-                <MovieCard 
-                  key={event.id}
-                  event={event}
-                  hasDetails={true}
-                  favoritesCount={event.favorites_count}
-                  commentsCount={event.comments_count}
-                  isFavorited={favoritedIds.has(event.id)}
-                  isSignedUp={isSignedUp}
-                  onFavoriteClick={() => handleFavorite(event)}
-                  onDetailsClick={() => { setSelectedEvent(event); setIsDrawerOpen(true); }}
-                  onSignupClick={handleSignupClick}
-                />
-              );
-            })
-          )}
-        </div>
-      </main>
-
-      <ReservationModal 
-        isOpen={isSignupModalOpen}
-        onClose={() => setIsSignupModalOpen(false)}
-        event={eventForSignup}
-        isLoading={isSigningUp}
-        onConfirm={() => handleConfirmSignup(eventForSignup)}
+      <EventsList 
+        events={events}
+        isLoading={isEventsLoading}
+        user={user}
+        favoritedIds={favoritedIds}
+        signedUpIds={signedUpIds}
+        onFavorite={handleFavorite}
+        onDetails={(event) => { setSelectedEvent(event); setIsDrawerOpen(true); }}
+        onSignup={(event) => {
+          if (!user) { setIsLoginModalOpen(true); return; }
+          // The modal logic is now inside MovieCard, so we just need to handle the signup sync
+          setSignedUpIds(prev => {
+            const next = new Set(prev);
+            // This is just to trigger any global state if needed, 
+            // but MovieCard handles its own local state.
+            return next;
+          });
+        }}
+        onStatusChange={(eventId, isSignedUp) => {
+          setSignedUpIds(prev => {
+            const next = new Set(prev);
+            isSignedUp ? next.add(eventId) : next.delete(eventId);
+            return next;
+          });
+        }}
       />
+
 
       <EventDrawer
         event={selectedEvent}

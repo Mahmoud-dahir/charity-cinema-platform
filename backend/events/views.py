@@ -10,8 +10,8 @@ from rest_framework.response import Response
 from interactions.models import Comment, Favorite
 from interactions.serializers import CommentSerializer
 
-from .models import Event, Signup
-from .serializers import EventSerializer
+from .models import Event, Signup, EventCategory, EventImage
+from .serializers import EventSerializer, EventCategorySerializer
 
 
 class IsAssociationEditor(permissions.BasePermission):
@@ -131,12 +131,23 @@ class EventViewSet(viewsets.ModelViewSet):
 
 		return qs.distinct()
 
+	@action(detail=False, methods=["get"], url_path="categories")
+	def categories(self, request):
+		qs = EventCategory.objects.all()
+		serializer = EventCategorySerializer(qs, many=True)
+		return Response(serializer.data)
+
 	def perform_create(self, serializer):
 		user = self.request.user
 		if not getattr(user, "association_id", None):
 			raise PermissionDenied("User must be attached to an association to create events")
 
-		serializer.save(created_by=user, association=user.association)
+		event = serializer.save(created_by=user, association=user.association)
+		
+		# Handle additional images if any in request.FILES
+		images = self.request.FILES.getlist("images")
+		for i, image_file in enumerate(images):
+			EventImage.objects.create(event=event, image=image_file, position=i)
 
 	@action(detail=True, methods=["post", "delete"], url_path="signup")
 	def signup(self, request, pk=None):

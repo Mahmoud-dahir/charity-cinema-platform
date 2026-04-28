@@ -3,7 +3,9 @@
 import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, Users, Film, CheckCircle, XCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Calendar, MapPin, Users, Film, CheckCircle, XCircle, Tag, Image as ImageIcon, Eye } from "lucide-react";
+import { BrouillonModal } from "./BrouillonModal";
 
 interface EventCardProps {
   event: any;
@@ -15,6 +17,7 @@ export function EventCard({ event, onPublish, onCancel }: EventCardProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [showCancelPrompt, setShowCancelPrompt] = useState(false);
+  const [isBrouillonModalOpen, setIsBrouillonModalOpen] = useState(false);
 
   const handlePublish = async () => {
     setIsProcessing(true);
@@ -47,7 +50,29 @@ export function EventCard({ event, onPublish, onCancel }: EventCardProps) {
   };
 
   return (
-    <Card className="shadow-sm border border-gray-100 flex flex-col h-full">
+    <Card className="shadow-sm border border-gray-100 flex flex-col h-full overflow-hidden hover:shadow-md transition-shadow">
+      {/* Cover Image */}
+      <div className="relative h-40 w-full bg-gray-100 border-b overflow-hidden">
+        {event.cover_image ? (
+          <img 
+            src={event.cover_image} 
+            alt={event.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 gap-2">
+            <ImageIcon className="w-8 h-8 opacity-20" />
+            <span className="text-xs italic opacity-50">Aucune image de couverture</span>
+          </div>
+        )}
+        {event.images && event.images.length > 0 && (
+          <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-md flex items-center gap-1">
+            <ImageIcon className="w-3 h-3" />
+            {event.images.length}
+          </div>
+        )}
+      </div>
+
       <CardHeader className="pb-3 border-b">
         <div className="flex justify-between items-start">
           <div>
@@ -74,8 +99,20 @@ export function EventCard({ event, onPublish, onCancel }: EventCardProps) {
           <Users className="w-4 h-4 text-gray-400" />
           <span>Capacité: {event.capacity ? event.capacity : "Illimitée"}</span>
         </div>
+
+        {/* Categories */}
+        {event.categories && event.categories.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {event.categories.map((cat: any) => (
+              <Badge key={cat.id} variant="secondary" className="text-[10px] py-0 px-2 bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100">
+                <Tag className="w-2.5 h-2.5 mr-1" />
+                {cat.name}
+              </Badge>
+            ))}
+          </div>
+        )}
         
-        <p className="text-sm text-gray-700 mt-4 line-clamp-3">
+        <p className="text-sm text-gray-700 mt-2 line-clamp-3 leading-relaxed">
           {event.description}
         </p>
 
@@ -119,17 +156,34 @@ export function EventCard({ event, onPublish, onCancel }: EventCardProps) {
           </Button>
           
           {event.status === "draft" && (
-            <Button 
-              onClick={handlePublish} 
-              disabled={isProcessing}
-              className="bg-green-600 text-white hover:bg-green-700"
-            >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Publier
-            </Button>
+            <>
+              <Button 
+                variant="secondary"
+                onClick={() => setIsBrouillonModalOpen(true)} 
+                disabled={isProcessing}
+                className="bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200 shadow-sm"
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                Détails
+              </Button>
+              <Button 
+                onClick={handlePublish} 
+                disabled={isProcessing}
+                className="bg-green-600 text-white hover:bg-green-700 shadow-sm"
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Publier
+              </Button>
+            </>
           )}
         </CardFooter>
       )}
+
+      <BrouillonModal 
+        event={event} 
+        isOpen={isBrouillonModalOpen} 
+        onClose={() => setIsBrouillonModalOpen(false)} 
+      />
     </Card>
   );
 }

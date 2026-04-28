@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { X, Calendar, MapPin, Users, Heart, MessageCircle, Send, Ticket, Building } from "lucide-react";
+import { X, Calendar, MapPin, Users, Heart, MessageCircle, Send, Ticket, Building, CheckCircle2 } from "lucide-react";
+import ReservationModal from "./ReservationModal";
+import CancelReservationModal from "./CancelReservationModal";
 
 interface Comment {
   id: string;
@@ -45,6 +47,8 @@ export function EventDrawer({ event, isOpen, onClose, user, onLoginRequired }: E
   const [isTogglingFav, setIsTogglingFav] = useState(false);
   const [isSignedUp, setIsSignedUp] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [localFavCount, setLocalFavCount] = useState(0);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
@@ -86,14 +90,38 @@ export function EventDrawer({ event, isOpen, onClose, user, onLoginRequired }: E
     }
   };
 
-  const handleSignup = async () => {
+  const handleSignup = () => {
     if (!user) { onLoginRequired(); return; }
-    if (isSigningUp || !event) return;
+    if (isSignedUp) {
+      setIsCancelModalOpen(true);
+    } else {
+      setIsSignupModalOpen(true);
+    }
+  };
+
+  const confirmSignup = async () => {
+    if (!event) return;
     setIsSigningUp(true);
-    const method = isSignedUp ? "DELETE" : "POST";
     try {
-      const res = await fetch(`/api/events/${event.id}/signup/`, { method });
-      if (res.ok || res.status === 204) setIsSignedUp(!isSignedUp);
+      const res = await fetch(`/api/events/${event.id}/signup/`, { method: "POST" });
+      if (res.ok) {
+        setIsSignedUp(true);
+        setIsSignupModalOpen(false);
+      }
+    } catch {} finally {
+      setIsSigningUp(false);
+    }
+  };
+
+  const confirmCancel = async () => {
+    if (!event) return;
+    setIsSigningUp(true);
+    try {
+      const res = await fetch(`/api/events/${event.id}/signup/`, { method: "DELETE" });
+      if (res.ok || res.status === 204) {
+        setIsSignedUp(false);
+        setIsCancelModalOpen(false);
+      }
     } catch {} finally {
       setIsSigningUp(false);
     }
@@ -219,12 +247,12 @@ export function EventDrawer({ event, isOpen, onClose, user, onLoginRequired }: E
                 disabled={isSigningUp}
                 className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${
                   isSignedUp
-                    ? "bg-green-500/20 border border-green-500/50 text-green-400 hover:bg-green-500/30"
+                    ? "bg-green-500/20 border border-green-500/50 text-green-400 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400"
                     : "bg-yellow-500 text-slate-900 hover:bg-yellow-400 hover:shadow-[0_0_20px_rgba(234,179,8,0.3)]"
                 }`}
               >
-                <Ticket className="w-4 h-4" />
-                {isSigningUp ? "Chargement..." : isSignedUp ? "Déjà inscrit" : "S'inscrire à l'événement"}
+                {isSignedUp ? <CheckCircle2 className="w-4 h-4" /> : <Ticket className="w-4 h-4" />}
+                {isSigningUp ? "Chargement..." : isSignedUp ? "Inscrit — Annuler" : "S'inscrire à l'événement"}
               </button>
             </div>
 
@@ -279,6 +307,22 @@ export function EventDrawer({ event, isOpen, onClose, user, onLoginRequired }: E
           </div>
         </div>
       </div>
+
+      <ReservationModal 
+        isOpen={isSignupModalOpen}
+        onClose={() => setIsSignupModalOpen(false)}
+        event={event}
+        onConfirm={confirmSignup}
+        isLoading={isSigningUp}
+      />
+
+      <CancelReservationModal 
+        isOpen={isCancelModalOpen}
+        onClose={() => setIsCancelModalOpen(false)}
+        event={event}
+        onConfirm={confirmCancel}
+        isLoading={isSigningUp}
+      />
     </>
   );
 }
