@@ -14,6 +14,9 @@ const config: Config = {
     'src/**/*.{ts,tsx}',
     '!src/**/*.d.ts',
   ],
+  moduleNameMapper: {
+    "^@/(.*)$": "<rootDir>/src/$1",
+  }
 }
 
 export default createJestConfig(config)

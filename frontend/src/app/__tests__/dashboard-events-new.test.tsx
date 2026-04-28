@@ -10,18 +10,12 @@ jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, replace: mockReplace }),
 }));
 
-jest.mock("../../components/dashboard/Header", () => ({
-  Header: () => {
-    const React = require("react");
-    return React.createElement("div", { "data-testid": "mock-header" }, "Header");
-  }
+jest.mock("@/components/dashboard/Header", () => ({
+  Header: () => <div data-testid="mock-header">Header</div>,
 }));
 
-jest.mock("../../components/dashboard/Sidebar", () => ({
-  Sidebar: () => {
-    const React = require("react");
-    return React.createElement("div", { "data-testid": "mock-sidebar" }, "Sidebar");
-  }
+jest.mock("@/components/dashboard/Sidebar", () => ({
+  Sidebar: () => <div data-testid="mock-sidebar">Sidebar</div>,
 }));
 
 
