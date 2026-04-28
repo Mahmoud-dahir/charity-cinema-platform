@@ -29,6 +29,7 @@ interface Event {
   signups_count: number;
   is_favorited: boolean;
   is_signed_up: boolean;
+  images?: { id: string | number; image: string; alt_text?: string }[];
 }
 
 interface EventDrawerProps {
@@ -179,12 +180,13 @@ export function EventDrawer({ event, isOpen, onClose, user, onLoginRequired }: E
           >
             <X className="w-5 h-5" />
           </button>
-          <div className="absolute bottom-4 left-6">
-            <h2 className="text-white text-2xl font-black leading-tight">{event.movie_title || event.title}</h2>
+          <div className="absolute bottom-4 left-6 right-16">
+            <h2 className="text-white text-2xl font-black leading-tight line-clamp-2">{event.title}</h2>
+            <p className="text-yellow-400 text-xs font-semibold uppercase tracking-wider mt-0.5 line-clamp-1">🎬 {event.movie_title}</p>
             {event.association_name && (
-              <div className="flex items-center gap-1.5 mt-1">
+              <div className="flex items-center gap-1.5 mt-1.5">
                 <Building className="w-3.5 h-3.5 text-yellow-500" />
-                <span className="text-yellow-400 text-sm font-medium">{event.association_name}</span>
+                <span className="text-yellow-400/80 text-sm font-medium">{event.association_name}</span>
               </div>
             )}
           </div>
@@ -226,6 +228,28 @@ export function EventDrawer({ event, isOpen, onClose, user, onLoginRequired }: E
               <div>
                 <h3 className="text-white font-bold mb-2">Description</h3>
                 <p className="text-slate-400 text-sm leading-relaxed">{event.description}</p>
+              </div>
+            )}
+
+            {/* Gallery */}
+            {event.images && event.images.length > 0 && (
+              <div>
+                <h3 className="text-white font-bold mb-3 flex items-center gap-2">
+                  <span className="text-yellow-500">📷</span>
+                  Photos ({event.images.length})
+                </h3>
+                <div className="flex flex-col gap-3">
+                  {event.images.map((img) => (
+                    <div key={img.id} className="w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center">
+                      <img
+                        src={img.image}
+                        alt={img.alt_text || "Photo de l'événement"}
+                        className="max-w-full h-auto object-contain rounded-xl"
+                        style={{ maxHeight: "60vh" }}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

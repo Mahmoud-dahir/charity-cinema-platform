@@ -41,11 +41,7 @@ export const MovieCard = ({
             <span className="text-[10px] sm:text-xs font-bold text-slate-900 tracking-wider uppercase">{`Par ${event.association_name}`}</span>
           </div>
         )}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
-          <div className="bg-yellow-500/90 p-4 rounded-full text-slate-900 transform scale-75 group-hover:scale-100 transition-transform duration-300 backdrop-blur-sm shadow-[0_0_30px_rgba(234,179,8,0.5)]">
-            <Play className="w-6 h-6 fill-slate-900" />
-          </div>
-        </div>
+
       </div>
       
       <div className="p-5 flex flex-col flex-grow justify-between relative bg-slate-900 z-10 -mt-6 rounded-t-2xl">
