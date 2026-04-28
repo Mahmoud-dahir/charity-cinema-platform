@@ -70,3 +70,27 @@ export async function GET() {
 
   return NextResponse.json(meData, { status: 200 })
 }
+
+export async function PATCH(request: Request) {
+  const cookieStore = await cookies()
+  const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value
+
+  if (!accessToken) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  }
+
+  const body = await request.json()
+
+  const res = await fetch(`${getBackendBaseUrl()}/api/accounts/users/update_profile/`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(body),
+  })
+
+  const data = await res.json().catch(() => null)
+  return NextResponse.json(data, { status: res.status })
+}
