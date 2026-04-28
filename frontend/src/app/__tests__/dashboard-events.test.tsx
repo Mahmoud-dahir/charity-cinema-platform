@@ -4,7 +4,8 @@ import EventsDashboardPage from '../dashboard/events/page';
 
 const mockReplace = jest.fn();
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ replace: mockReplace })
+  usePathname: jest.fn(() => '/dashboard/events'),
+  useRouter: () => ({ replace: mockReplace, push: jest.fn() })
 }));
 
 jest.mock('../../components/dashboard/Sidebar', () => ({

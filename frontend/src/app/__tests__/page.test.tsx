@@ -78,7 +78,8 @@ describe('Home Component Integration Tests', () => {
         starts_at: '2026-05-20T20:00:00Z',
         location: 'Pathé Bellecour',
         association_name: 'Amnesty International',
-        cover_image: 'https://example.com/image.jpg'
+        cover_image: 'https://example.com/image.jpg',
+        status: 'published'
       }
     ];
     

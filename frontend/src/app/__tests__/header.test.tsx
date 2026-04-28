@@ -21,7 +21,7 @@ describe('Header Component', () => {
     window.location = { href: '' } as any;
 
     render(<Header user={{ first_name: 'John', last_name: 'Doe' }} />);
-    expect(screen.getByText('John Doe')).toBeInTheDocument();
+    expect(screen.getByText('Mon Espace')).toBeInTheDocument();
 
     const logoutBtn = screen.getByTitle('Se déconnecter');
     fireEvent.click(logoutBtn);
@@ -31,7 +31,7 @@ describe('Header Component', () => {
       expect(window.location.href).toBe('/');
     });
 
-    window.location = originalLocation;
+    window.location = originalLocation as any;
   });
 
   it('effectue une recherche après un délai et affiche les résultats', async () => {

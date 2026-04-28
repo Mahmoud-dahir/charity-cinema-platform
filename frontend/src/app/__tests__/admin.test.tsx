@@ -5,7 +5,10 @@ import AdminLayout from '../admin/layout';
 import AdminDashboardPage from '../admin/page';
 import AdminUsersPage from '../admin/users/page';
 
-jest.mock('next/navigation', () => ({ useRouter: () => ({ replace: jest.fn() }) }));
+jest.mock('next/navigation', () => ({
+  usePathname: jest.fn(() => '/admin'),
+  useRouter: jest.fn(() => ({ push: jest.fn(), replace: jest.fn() })),
+}));
 
 // Mocks simples pour les composants complexes
 jest.mock('../../components/admin/RequestCard', () => ({ 
