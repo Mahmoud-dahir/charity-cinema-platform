@@ -30,7 +30,8 @@ export default function ReservationModal({
       >
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors z-10"
+          disabled={isLoading}
+          className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors z-10 disabled:opacity-50"
         >
           <X className="w-6 h-6" />
         </button>
