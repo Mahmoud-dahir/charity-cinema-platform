@@ -7,10 +7,12 @@ jest.mock('next/navigation', () => ({
   useRouter: jest.fn(),
 }));
 
-jest.mock('@/components/dashboard/Header', () => ({
+
+jest.mock('../../components/dashboard/Header', () => ({
   Header: () => <div data-testid="mock-header">Header</div>,
 }));
-jest.mock('@/components/dashboard/Sidebar', () => ({
+
+jest.mock('../../components/dashboard/Sidebar', () => ({
   Sidebar: () => <div data-testid="mock-sidebar">Sidebar</div>,
 }));
 
