@@ -1,8 +1,18 @@
+"use client";
 import React from "react";
 import Link from "next/link";
-import { LayoutDashboard, Users, Building, ShieldAlert } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Users, Building, ShieldAlert, Tag } from "lucide-react";
+
+const navLinks = [
+  { href: "/admin", label: "Demandes d'Asso", icon: Building, exact: true },
+  { href: "/admin/users", label: "Utilisateurs", icon: Users },
+  { href: "/admin/categories", label: "Catégories", icon: Tag },
+];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
   return (
     <div className="min-h-screen bg-gray-50 font-sans flex">
       {/* Sidebar */}
@@ -13,15 +23,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             AdminPanel
           </Link>
         </div>
-        <nav className="mt-6 px-4 space-y-2">
-          <Link href="/admin" className="flex items-center space-x-3 bg-[#333] text-white px-4 py-3 rounded-xl font-medium">
-            <Building className="w-5 h-5 text-[#facc15]" />
-            <span>Demandes d'Asso</span>
-          </Link>
-          <Link href="/admin/users" className="flex items-center space-x-3 text-gray-400 hover:bg-[#333] hover:text-white px-4 py-3 rounded-xl font-medium transition-colors">
-            <Users className="w-5 h-5" />
-            <span>Utilisateurs</span>
-          </Link>
+        <nav className="mt-6 px-4 space-y-1">
+          {navLinks.map(({ href, label, icon: Icon, exact }) => {
+            const isActive = exact ? pathname === href : pathname.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-colors ${
+                  isActive ? "bg-[#facc15] text-gray-900" : "text-gray-400 hover:bg-[#333] hover:text-white"
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span>{label}</span>
+              </Link>
+            );
+          })}
         </nav>
       </aside>
 

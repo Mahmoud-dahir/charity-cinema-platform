@@ -1,12 +1,19 @@
 from rest_framework import serializers
 
-from .models import Event, EventCategory
+from .models import Event, EventCategory, EventImage
 
 
 class EventCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = EventCategory
         fields = ["id", "name", "slug", "parent"]
+        read_only_fields = ["id", "slug"]
+
+
+class EventImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EventImage
+        fields = ["id", "image", "alt_text", "position"]
         read_only_fields = ["id"]
 
 
@@ -17,6 +24,12 @@ class EventSerializer(serializers.ModelSerializer):
         queryset=EventCategory.objects.all(),
         required=False,
     )
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep["categories"] = EventCategorySerializer(instance.categories.all(), many=True, context=self.context).data
+        rep["images"] = EventImageSerializer(instance.images.all(), many=True, context=self.context).data
+        return rep
     association_name = serializers.CharField(source="association.name", read_only=True)
     favorites_count = serializers.IntegerField(read_only=True, default=0)
     comments_count = serializers.IntegerField(read_only=True, default=0)

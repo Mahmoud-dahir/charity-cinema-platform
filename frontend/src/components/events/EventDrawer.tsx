@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { X, Calendar, MapPin, Users, Heart, MessageCircle, Send, Ticket, Building } from "lucide-react";
+import { X, Calendar, MapPin, Users, Heart, MessageCircle, Send, Ticket, Building, CheckCircle2 } from "lucide-react";
+import ReservationModal from "./ReservationModal";
+import CancelReservationModal from "./CancelReservationModal";
 
 interface Comment {
   id: string;
@@ -27,6 +29,7 @@ interface Event {
   signups_count: number;
   is_favorited: boolean;
   is_signed_up: boolean;
+  images?: { id: string | number; image: string; alt_text?: string }[];
 }
 
 interface EventDrawerProps {
@@ -45,6 +48,8 @@ export function EventDrawer({ event, isOpen, onClose, user, onLoginRequired }: E
   const [isTogglingFav, setIsTogglingFav] = useState(false);
   const [isSignedUp, setIsSignedUp] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [localFavCount, setLocalFavCount] = useState(0);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
@@ -86,14 +91,38 @@ export function EventDrawer({ event, isOpen, onClose, user, onLoginRequired }: E
     }
   };
 
-  const handleSignup = async () => {
+  const handleSignup = () => {
     if (!user) { onLoginRequired(); return; }
-    if (isSigningUp || !event) return;
+    if (isSignedUp) {
+      setIsCancelModalOpen(true);
+    } else {
+      setIsSignupModalOpen(true);
+    }
+  };
+
+  const confirmSignup = async () => {
+    if (!event) return;
     setIsSigningUp(true);
-    const method = isSignedUp ? "DELETE" : "POST";
     try {
-      const res = await fetch(`/api/events/${event.id}/signup/`, { method });
-      if (res.ok || res.status === 204) setIsSignedUp(!isSignedUp);
+      const res = await fetch(`/api/events/${event.id}/signup/`, { method: "POST" });
+      if (res.ok) {
+        setIsSignedUp(true);
+        setIsSignupModalOpen(false);
+      }
+    } catch {} finally {
+      setIsSigningUp(false);
+    }
+  };
+
+  const confirmCancel = async () => {
+    if (!event) return;
+    setIsSigningUp(true);
+    try {
+      const res = await fetch(`/api/events/${event.id}/signup/`, { method: "DELETE" });
+      if (res.ok || res.status === 204) {
+        setIsSignedUp(false);
+        setIsCancelModalOpen(false);
+      }
     } catch {} finally {
       setIsSigningUp(false);
     }
@@ -151,12 +180,13 @@ export function EventDrawer({ event, isOpen, onClose, user, onLoginRequired }: E
           >
             <X className="w-5 h-5" />
           </button>
-          <div className="absolute bottom-4 left-6">
-            <h2 className="text-white text-2xl font-black leading-tight">{event.movie_title || event.title}</h2>
+          <div className="absolute bottom-4 left-6 right-16">
+            <h2 className="text-white text-2xl font-black leading-tight line-clamp-2">{event.title}</h2>
+            <p className="text-yellow-400 text-xs font-semibold uppercase tracking-wider mt-0.5 line-clamp-1">🎬 {event.movie_title}</p>
             {event.association_name && (
-              <div className="flex items-center gap-1.5 mt-1">
+              <div className="flex items-center gap-1.5 mt-1.5">
                 <Building className="w-3.5 h-3.5 text-yellow-500" />
-                <span className="text-yellow-400 text-sm font-medium">{event.association_name}</span>
+                <span className="text-yellow-400/80 text-sm font-medium">{event.association_name}</span>
               </div>
             )}
           </div>
@@ -201,6 +231,28 @@ export function EventDrawer({ event, isOpen, onClose, user, onLoginRequired }: E
               </div>
             )}
 
+            {/* Gallery */}
+            {event.images && event.images.length > 0 && (
+              <div>
+                <h3 className="text-white font-bold mb-3 flex items-center gap-2">
+                  <span className="text-yellow-500">📷</span>
+                  Photos ({event.images.length})
+                </h3>
+                <div className="flex flex-col gap-3">
+                  {event.images.map((img) => (
+                    <div key={img.id} className="w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center">
+                      <img
+                        src={img.image}
+                        alt={img.alt_text || "Photo de l'événement"}
+                        className="max-w-full h-auto object-contain rounded-xl"
+                        style={{ maxHeight: "60vh" }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Action buttons */}
             <div className="flex gap-3">
               <button
@@ -219,12 +271,12 @@ export function EventDrawer({ event, isOpen, onClose, user, onLoginRequired }: E
                 disabled={isSigningUp}
                 className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${
                   isSignedUp
-                    ? "bg-green-500/20 border border-green-500/50 text-green-400 hover:bg-green-500/30"
+                    ? "bg-green-500/20 border border-green-500/50 text-green-400 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400"
                     : "bg-yellow-500 text-slate-900 hover:bg-yellow-400 hover:shadow-[0_0_20px_rgba(234,179,8,0.3)]"
                 }`}
               >
-                <Ticket className="w-4 h-4" />
-                {isSigningUp ? "Chargement..." : isSignedUp ? "Déjà inscrit" : "S'inscrire à l'événement"}
+                {isSignedUp ? <CheckCircle2 className="w-4 h-4" /> : <Ticket className="w-4 h-4" />}
+                {isSigningUp ? "Chargement..." : isSignedUp ? "Inscrit — Annuler" : "S'inscrire à l'événement"}
               </button>
             </div>
 
@@ -279,6 +331,22 @@ export function EventDrawer({ event, isOpen, onClose, user, onLoginRequired }: E
           </div>
         </div>
       </div>
+
+      <ReservationModal 
+        isOpen={isSignupModalOpen}
+        onClose={() => setIsSignupModalOpen(false)}
+        event={event}
+        onConfirm={confirmSignup}
+        isLoading={isSigningUp}
+      />
+
+      <CancelReservationModal 
+        isOpen={isCancelModalOpen}
+        onClose={() => setIsCancelModalOpen(false)}
+        event={event}
+        onConfirm={confirmCancel}
+        isLoading={isSigningUp}
+      />
     </>
   );
 }

@@ -36,6 +36,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
 
+  const contentType = request.headers.get("content-type") || "";
+
+  if (contentType.includes("multipart/form-data")) {
+    const incomingFormData = await request.formData();
+
+    const outgoingFormData = new FormData();
+    incomingFormData.forEach((value, key) => {
+      outgoingFormData.append(key, value);
+    });
+
+    const res = await fetch(`${getBackendBaseUrl()}/api/events/`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json",
+      },
+      body: outgoingFormData,
+    });
+    const data = await res.json().catch(() => null);
+    return NextResponse.json(data, { status: res.status });
+  }
+
   const body = await request.json()
 
   const res = await fetch(`${getBackendBaseUrl()}/api/events/`, {

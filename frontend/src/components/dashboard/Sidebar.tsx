@@ -59,10 +59,17 @@ export function Sidebar({ user }: SidebarProps) {
             <span>Favoris</span>
           </Link>
           
-          <a href="#" className="flex items-center space-x-3 text-gray-500 hover:bg-gray-50 hover:text-black px-4 py-3 rounded-xl font-medium transition-colors">
-            <Settings className="w-5 h-5" />
+          <Link
+            href="/dashboard/parametres"
+            className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-colors ${
+              isActive("/dashboard/parametres")
+                ? "bg-yellow-50 text-black font-bold border border-yellow-100"
+                : "text-gray-500 hover:bg-gray-50 hover:text-black font-medium"
+            }`}
+          >
+            <Settings className={`w-5 h-5 ${isActive("/dashboard/parametres") ? "text-[#facc15]" : ""}`} />
             <span>Paramètres</span>
-          </a>
+          </Link>
           
           {user?.has_association && (
             <Link 

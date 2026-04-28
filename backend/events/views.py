@@ -5,13 +5,25 @@ from django.utils.dateparse import parse_datetime
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 from rest_framework.response import Response
 
 from interactions.models import Comment, Favorite
 from interactions.serializers import CommentSerializer
 
-from .models import Event, Signup
-from .serializers import EventSerializer
+from .models import Event, Signup, EventCategory, EventImage
+from .serializers import EventSerializer, EventCategorySerializer
+
+
+class CategoryViewSet(viewsets.ModelViewSet):
+	"""Full CRUD for event categories — staff/admin only."""
+	queryset = EventCategory.objects.all().order_by("name")
+	serializer_class = EventCategorySerializer
+
+	def get_permissions(self):
+		if self.request.method in ["GET", "HEAD", "OPTIONS"]:
+			return [permissions.AllowAny()]
+		return [permissions.IsAdminUser()]
 
 
 class IsAssociationEditor(permissions.BasePermission):
@@ -38,6 +50,7 @@ class IsAssociationEditor(permissions.BasePermission):
 class EventViewSet(viewsets.ModelViewSet):
 	queryset = Event.objects.all()
 	serializer_class = EventSerializer
+	parser_classes = [MultiPartParser, FormParser, JSONParser]
 
 	def get_permissions(self):
 		if self.action in ["list", "retrieve"]:
@@ -131,12 +144,22 @@ class EventViewSet(viewsets.ModelViewSet):
 
 		return qs.distinct()
 
+	@action(detail=False, methods=["get"], url_path="categories")
+	def categories(self, request):
+		qs = EventCategory.objects.all()
+		serializer = EventCategorySerializer(qs, many=True)
+		return Response(serializer.data)
+
 	def perform_create(self, serializer):
 		user = self.request.user
 		if not getattr(user, "association_id", None):
 			raise PermissionDenied("User must be attached to an association to create events")
 
-		serializer.save(created_by=user, association=user.association)
+		event = serializer.save(created_by=user, association=user.association)
+		
+		images = self.request.FILES.getlist("images")
+		for i, image_file in enumerate(images):
+			EventImage.objects.create(event=event, image=image_file, position=i)
 
 	@action(detail=True, methods=["post", "delete"], url_path="signup")
 	def signup(self, request, pk=None):

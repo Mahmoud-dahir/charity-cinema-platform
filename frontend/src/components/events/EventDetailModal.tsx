@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { X, Calendar, MapPin, Users, Heart, MessageCircle, Send, Ticket, Building, CheckCircle2 } from "lucide-react";
+import CancelReservationModal from "./CancelReservationModal";
 
 interface Comment {
   id: string;
@@ -45,6 +46,7 @@ export function EventDetailModal({ event, isOpen, onClose, user, onCancelSignup 
   const [isTogglingFav, setIsTogglingFav] = useState(false);
   const [isSignedUp, setIsSignedUp] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [localFavCount, setLocalFavCount] = useState(0);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
@@ -88,16 +90,30 @@ export function EventDetailModal({ event, isOpen, onClose, user, onCancelSignup 
   const handleSignup = async () => {
     if (isSigningUp || !event) return;
     if (isSignedUp) {
-      if (onCancelSignup) {
-        onClose();
-        onCancelSignup(event.id);
-      }
+      setIsCancelModalOpen(true);
       return;
     }
     setIsSigningUp(true);
     try {
       const res = await fetch(`/api/events/${event.id}/signup/`, { method: "POST" });
       if (res.ok) setIsSignedUp(true);
+    } catch {} finally {
+      setIsSigningUp(false);
+    }
+  };
+
+  const confirmCancel = async () => {
+    if (!event) return;
+    setIsSigningUp(true);
+    try {
+      const res = await fetch(`/api/events/${event.id}/signup/`, { method: "DELETE" });
+      if (res.ok || res.status === 204) {
+        setIsSignedUp(false);
+        setIsCancelModalOpen(false);
+        if (onCancelSignup) {
+          onCancelSignup(event.id);
+        }
+      }
     } catch {} finally {
       setIsSigningUp(false);
     }
@@ -314,6 +330,14 @@ export function EventDetailModal({ event, isOpen, onClose, user, onCancelSignup 
           </div>
         </div>
       </div>
+
+      <CancelReservationModal 
+        isOpen={isCancelModalOpen}
+        onClose={() => setIsCancelModalOpen(false)}
+        event={event}
+        onConfirm={confirmCancel}
+        isLoading={isSigningUp}
+      />
     </>
   );
 }

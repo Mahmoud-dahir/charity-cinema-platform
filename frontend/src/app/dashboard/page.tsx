@@ -6,11 +6,15 @@ import { LayoutDashboard, LogOut, Settings, Calendar, Heart, User, Building, Fil
 import Link from 'next/link';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { Header } from '@/components/dashboard/Header';
+import { EventDetailModal } from '@/components/events/EventDetailModal';
 
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [inscriptionsCount, setInscriptionsCount] = useState(0);
+  const [inscriptions, setInscriptions] = useState<any[]>([]);
+  const [favoritesCount, setFavoritesCount] = useState(0);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -21,17 +25,31 @@ export default function Dashboard() {
       })
       .then(data => {
         setUser(data);
-        return fetch('/api/events?signedup=true');
+        return Promise.all([
+          fetch('/api/events?signedup=true').then(res => res.json()),
+          fetch('/api/events?favorited=true').then(res => res.json())
+        ]);
       })
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setInscriptionsCount(data.length);
+      .then(([inscriptionsData, favoritesData]) => {
+        if (Array.isArray(inscriptionsData)) setInscriptions(inscriptionsData);
+        if (Array.isArray(favoritesData)) setFavoritesCount(favoritesData.length);
         setIsLoading(false);
       })
       .catch(() => {
         router.replace('/');
       });
   }, [router]);
+
+  const handleCancelSignup = async (eventId: any) => {
+    try {
+      const res = await fetch(`/api/events/${eventId}/signup/`, { method: "DELETE" });
+      if (res.ok || res.status === 204) {
+        setInscriptions(prev => prev.filter(e => e.id !== eventId));
+      }
+    } catch (err) {
+      console.error("Error cancelling signup:", err);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -61,29 +79,71 @@ export default function Dashboard() {
                 <Calendar className="w-6 h-6 text-[#facc15]" />
               </div>
               <h3 className="text-gray-500 font-medium text-sm">Inscriptions actives</h3>
-              <p className="text-3xl font-bold text-[#1a1a1a] mt-1">{inscriptionsCount}</p>
+              <p className="text-3xl font-bold text-[#1a1a1a] mt-1">{inscriptions.length}</p>
             </div>
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
               <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
                 <Heart className="w-6 h-6 text-[#facc15]" />
               </div>
-              <h3 className="text-gray-500 font-medium text-sm">Assos favoris</h3>
-              <p className="text-3xl font-bold text-[#1a1a1a] mt-1">0</p>
+              <h3 className="text-gray-500 font-medium text-sm">Événements favoris</h3>
+              <p className="text-3xl font-bold text-[#1a1a1a] mt-1">{favoritesCount}</p>
             </div>
           </div>
           
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center py-16">
-            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Calendar className="w-10 h-10 text-gray-300" />
+          {inscriptions.length > 0 ? (
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold text-[#1a1a1a] mb-4">Mes prochaines séances</h2>
+              <div className="grid gap-4">
+                {inscriptions.map((event) => (
+                  <div key={event.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-6 hover:shadow-md transition-shadow">
+                    <div 
+                      className="w-20 h-28 bg-gray-200 rounded-xl bg-cover bg-center shrink-0 shadow-sm"
+                      style={{ backgroundImage: `url(${event.cover_image || "https://images.unsplash.com/photo-1478720568477-152d9b164e26?q=80&w=500&auto=format&fit=crop"})` }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-lg text-gray-900 truncate mb-1">{event.movie_title || event.title}</h4>
+                      <div className="flex flex-wrap gap-y-1 gap-x-4 text-sm text-gray-500">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="w-4 h-4 text-yellow-500" />
+                          <span>{new Date(event.starts_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Building className="w-4 h-4 text-yellow-500" />
+                          <span className="truncate max-w-[200px]">{event.location}</span>
+                        </div>
+                      </div>
+                    </div>
+                     <button 
+                      onClick={() => { setSelectedEvent(event); setIsModalOpen(true); }}
+                      className="px-6 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold rounded-xl transition-colors text-sm border border-gray-200"
+                    >
+                      Détails
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Aucune inscription récente</h3>
-            <p className="text-gray-500 max-w-md mx-auto mb-8">Vous n'avez pas encore participé à des séances solidaires. Explorez les films à l'affiche pour vous engager.</p>
-            <Link href="/" className="inline-block bg-[#facc15] hover:bg-yellow-500 text-black font-bold py-3 px-8 rounded-full transition-colors shadow-sm">
-              Découvrir les films
-            </Link>
-          </div>
+          ) : (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center py-16">
+              <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Calendar className="w-10 h-10 text-gray-300" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Aucune inscription récente</h3>
+              <p className="text-gray-500 max-w-md mx-auto mb-8">Vous n'avez pas encore participé à des séances solidaires. Explorez les films à l'affiche pour vous engager.</p>
+              <Link href="/" className="inline-block bg-[#facc15] hover:bg-yellow-500 text-black font-bold py-3 px-8 rounded-full transition-colors shadow-sm">
+                Découvrir les films
+              </Link>
+            </div>
+          )}
         </main>
       </div>
+      <EventDetailModal 
+        event={selectedEvent}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        user={user}
+        onCancelSignup={handleCancelSignup}
+      />
     </div>
   );
 }
