@@ -1,10 +1,12 @@
 from rest_framework import serializers
+from events.serializers import EventCategorySerializer, EventImageSerializer
 
 
 class DashboardEventSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     title = serializers.CharField()
     movie_title = serializers.CharField()
+    description = serializers.CharField(allow_blank=True)
     starts_at = serializers.DateTimeField()
     ends_at = serializers.DateTimeField(allow_null=True)
     location = serializers.CharField()
@@ -17,3 +19,6 @@ class DashboardEventSerializer(serializers.Serializer):
     favorites_count = serializers.IntegerField()
     comments_count = serializers.IntegerField()
     signups_count = serializers.IntegerField()
+
+    categories = EventCategorySerializer(many=True, read_only=True)
+    images = EventImageSerializer(many=True, read_only=True)

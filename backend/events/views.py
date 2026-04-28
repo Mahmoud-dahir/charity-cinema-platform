@@ -5,6 +5,7 @@ from django.utils.dateparse import parse_datetime
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 from rest_framework.response import Response
 
 from interactions.models import Comment, Favorite
@@ -38,6 +39,7 @@ class IsAssociationEditor(permissions.BasePermission):
 class EventViewSet(viewsets.ModelViewSet):
 	queryset = Event.objects.all()
 	serializer_class = EventSerializer
+	parser_classes = [MultiPartParser, FormParser, JSONParser]
 
 	def get_permissions(self):
 		if self.action in ["list", "retrieve"]:
@@ -144,7 +146,6 @@ class EventViewSet(viewsets.ModelViewSet):
 
 		event = serializer.save(created_by=user, association=user.association)
 		
-		# Handle additional images if any in request.FILES
 		images = self.request.FILES.getlist("images")
 		for i, image_file in enumerate(images):
 			EventImage.objects.create(event=event, image=image_file, position=i)

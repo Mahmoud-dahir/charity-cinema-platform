@@ -39,16 +39,21 @@ export async function POST(request: Request) {
   const contentType = request.headers.get("content-type") || "";
 
   if (contentType.includes("multipart/form-data")) {
+    const incomingFormData = await request.formData();
+
+    const outgoingFormData = new FormData();
+    incomingFormData.forEach((value, key) => {
+      outgoingFormData.append(key, value);
+    });
+
     const res = await fetch(`${getBackendBaseUrl()}/api/events/`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/json",
-        "Content-Type": contentType,
       },
-      body: request.body as any,
-      duplex: "half",
-    } as any);
+      body: outgoingFormData,
+    });
     const data = await res.json().catch(() => null);
     return NextResponse.json(data, { status: res.status });
   }
