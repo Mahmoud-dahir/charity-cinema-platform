@@ -11,7 +11,11 @@ jest.mock('next/navigation', () => ({
 jest.mock('../../components/dashboard/Header', () => ({ Header: () => <div>Header</div> }));
 
 describe('New Event Page', () => {
-  beforeEach(() => { global.fetch = jest.fn(); });
+  beforeEach(() => { 
+    global.fetch = jest.fn();
+    window.alert = jest.fn();
+    jest.clearAllMocks();
+  });
 
   it('submits the form successfully', async () => {
     (global.fetch as jest.Mock).mockImplementation((url) => {
