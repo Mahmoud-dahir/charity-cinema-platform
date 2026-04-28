@@ -15,6 +15,17 @@ from .models import Event, Signup, EventCategory, EventImage
 from .serializers import EventSerializer, EventCategorySerializer
 
 
+class CategoryViewSet(viewsets.ModelViewSet):
+	"""Full CRUD for event categories — staff/admin only."""
+	queryset = EventCategory.objects.all().order_by("name")
+	serializer_class = EventCategorySerializer
+
+	def get_permissions(self):
+		if self.request.method in ["GET", "HEAD", "OPTIONS"]:
+			return [permissions.AllowAny()]
+		return [permissions.IsAdminUser()]
+
+
 class IsAssociationEditor(permissions.BasePermission):
 	"""Allow writes only for users attached to an association.
 

@@ -7,7 +7,7 @@ class EventCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = EventCategory
         fields = ["id", "name", "slug", "parent"]
-        read_only_fields = ["id"]
+        read_only_fields = ["id", "slug"]
 
 
 class EventImageSerializer(serializers.ModelSerializer):
