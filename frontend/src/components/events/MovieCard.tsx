@@ -52,7 +52,8 @@ export const MovieCard = ({
         {hasDetails ? (
           <>
             <div className="mb-4">
-              <h3 className="font-extrabold text-white text-xl leading-snug mb-3 group-hover:text-yellow-400 transition-colors drop-shadow-sm line-clamp-2">{event.movie_title || event.title}</h3>
+              <h3 className="font-extrabold text-white text-xl leading-snug mb-1 group-hover:text-yellow-400 transition-colors drop-shadow-sm line-clamp-2">{event.title}</h3>
+              <p className="text-yellow-500/80 text-xs font-semibold uppercase tracking-wider mb-3 line-clamp-1">🎬 {event.movie_title}</p>
               <div className="space-y-2.5">
                 <div className="flex items-center text-slate-300">
                   <Calendar className="w-4 h-4 mr-2.5 text-yellow-500" />

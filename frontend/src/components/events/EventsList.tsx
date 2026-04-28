@@ -15,7 +15,7 @@ interface EventsListProps {
   signedUpIds: Set<any>;
   onFavorite: (event: any) => void;
   onDetails: (event: any) => void;
-  onSignup: (event: any) => void; // Keeps original login check logic from parent if needed
+  onSignup: (event: any) => void;
   onStatusChange: (eventId: any, isSignedUp: boolean) => void;
 }
 
@@ -37,7 +37,7 @@ export const EventsList = ({
 
   const handleSignupClick = (event: any) => {
     if (!user) {
-      onSignup(event); // Triggers login modal via parent
+      onSignup(event); 
       return;
     }
     setSelectedEvent(event);
@@ -102,7 +102,7 @@ export const EventsList = ({
             <p>Aucun événement prévu pour le moment.</p>
           </div>
         ) : (
-          events.map((event) => (
+          events.filter(event => event.status === "published").map((event) => (
             <MovieCard 
               key={event.id}
               event={event}
