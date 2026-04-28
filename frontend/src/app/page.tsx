@@ -1,12 +1,15 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Search, User, SlidersHorizontal, Heart, LayoutDashboard, Calendar, MapPin, Play, Ticket, Mail, ChevronRight, MessageCircle } from 'lucide-react';
+import { Search, User, SlidersHorizontal, Heart, LayoutDashboard, Calendar, MapPin, Play, Ticket, Mail, ChevronRight, MessageCircle, Users } from 'lucide-react';
 import Link from 'next/link';
 import { motion, Variants } from 'framer-motion';
 import LoginModal from './login/page';
 import RegisterModal from './register/page';
 import { EventDrawer } from '@/components/events/EventDrawer';
+import ReservationModal from '@/components/events/ReservationModal';
+import { CheckCircle2 } from 'lucide-react';
+
 
 const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 30 },
@@ -24,31 +27,25 @@ const staggerContainer: Variants = {
 };
 
 const MovieCard = ({ 
-  title, 
-  date, 
-  location, 
-  imageUrl, 
-  tag, 
+  event,
   hasDetails,
   favoritesCount,
   commentsCount,
   isFavorited,
   onFavoriteClick,
   onDetailsClick,
-  onReserveClick,
+  onSignupClick,
+  isSignedUp,
 }: { 
-  title?: string, 
-  date?: string, 
-  location?: string, 
-  imageUrl: string, 
-  tag?: string,
-  hasDetails?: boolean,
+  event: any, 
+  hasDetails?: boolean, 
   favoritesCount?: number,
   commentsCount?: number,
   isFavorited?: boolean,
   onFavoriteClick?: () => void,
   onDetailsClick?: () => void,
-  onReserveClick?: () => void,
+  onSignupClick?: () => void,
+  isSignedUp?: boolean,
 }) => {
   return (
     <div 
@@ -56,13 +53,13 @@ const MovieCard = ({
     >
       <div 
         className="w-full h-64 sm:h-72 bg-slate-800 bg-cover bg-center relative overflow-hidden"
-        style={{ backgroundImage: `url(${imageUrl})` }}
+        style={{ backgroundImage: `url(${event.cover_image || "https://images.unsplash.com/photo-1478720568477-152d9b164e26?q=80&w=500&auto=format&fit=crop"})` }}
       >
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-90 group-hover:opacity-60 transition-opacity duration-300"></div>
-        {tag && (
+        {event.association_name && (
           <div className="absolute top-4 left-4 bg-yellow-500 px-3 py-1.5 rounded-full shadow-lg flex items-center space-x-1.5 z-10">
             <Heart className="w-3.5 h-3.5 text-slate-900 fill-slate-900" />
-            <span className="text-[10px] sm:text-xs font-bold text-slate-900 tracking-wider uppercase">{tag}</span>
+            <span className="text-[10px] sm:text-xs font-bold text-slate-900 tracking-wider uppercase">{`Par ${event.association_name}`}</span>
           </div>
         )}
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
@@ -76,20 +73,25 @@ const MovieCard = ({
         {hasDetails ? (
           <>
             <div className="mb-4">
-              <h3 className="font-extrabold text-white text-xl leading-snug mb-3 group-hover:text-yellow-400 transition-colors drop-shadow-sm line-clamp-2">{title}</h3>
+              <h3 className="font-extrabold text-white text-xl leading-snug mb-3 group-hover:text-yellow-400 transition-colors drop-shadow-sm line-clamp-2">{event.movie_title || event.title}</h3>
               <div className="space-y-2.5">
                 <div className="flex items-center text-slate-300">
                   <Calendar className="w-4 h-4 mr-2.5 text-yellow-500" />
-                  <p className="text-sm font-medium">{date}</p>
+                  <p className="text-sm font-medium">{"Le " + new Date(event.starts_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</p>
                 </div>
                 <div className="flex items-start text-slate-400">
                   <MapPin className="w-4 h-4 mr-2.5 text-yellow-500 shrink-0 mt-0.5" />
-                  <p className="text-sm line-clamp-2">{location}</p>
+                  <p className="text-sm line-clamp-2">{event.location}</p>
                 </div>
+                {event.capacity && (
+                  <div className="flex items-center text-slate-400">
+                    <Users className="w-4 h-4 mr-2.5 text-yellow-500" />
+                    <p className="text-sm">{event.signups_count || 0} / {event.capacity} places</p>
+                  </div>
+                )}
               </div>
             </div>
             
-            {/* Interaction counts */}
             <div className="flex gap-3 mb-3 text-slate-500 text-xs">
               <span className="flex items-center gap-1">
                 <Heart className={`w-3.5 h-3.5 ${isFavorited ? 'fill-red-400 text-red-400' : ''}`} />
@@ -119,11 +121,11 @@ const MovieCard = ({
                 Détails
               </button>
               <button 
-                onClick={onReserveClick}
-                className="bg-yellow-500 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-900 hover:bg-yellow-400 hover:shadow-[0_0_15px_rgba(234,179,8,0.4)] transition-all flex-1 text-center flex items-center justify-center"
+                onClick={onSignupClick}
+                className={`${isSignedUp ? 'bg-green-500 hover:bg-green-400' : 'bg-yellow-500 hover:bg-yellow-400'} px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-900 transition-all flex-1 text-center flex items-center justify-center`}
               >
-                <Ticket className="w-4 h-4 mr-1.5" />
-                Réserver
+                {isSignedUp ? <CheckCircle2 className="w-4 h-4 mr-1.5" /> : <Ticket className="w-4 h-4 mr-1.5" />}
+                {isSignedUp ? 'Inscrit' : "S'inscrire"}
               </button>
             </div>
           </>
@@ -144,9 +146,13 @@ export default function Home() {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [events, setEvents] = useState<any[]>([]);
   const [isEventsLoading, setIsEventsLoading] = useState(true);
-  const [favoritedIds, setFavoritedIds] = useState<Set<string>>(new Set());
+  const [favoritedIds, setFavoritedIds] = useState<Set<any>>(new Set());
+  const [signedUpIds, setSignedUpIds] = useState<Set<any>>(new Set());
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
+  const [eventForSignup, setEventForSignup] = useState<any>(null);
+  const [isSigningUp, setIsSigningUp] = useState(false);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -169,21 +175,13 @@ export default function Home() {
         return res.json();
       })
       .then(data => {
-        console.log("Fetched events:", data);
         const evts = Array.isArray(data) ? data : [];
         setEvents(evts);
-        
-        fetch('/api/events?favorited=true')
-          .then(res => res.json())
-          .then(favs => {
-            if (Array.isArray(favs)) {
-              setFavoritedIds(new Set(favs.map((f: any) => f.id)));
-            }
-          })
-          .catch(() => {});
+        // Use the per-event annotations — no extra round trips needed
+        setFavoritedIds(new Set(evts.filter((e: any) => e.is_favorited).map((e: any) => e.id)));
+        setSignedUpIds(new Set(evts.filter((e: any) => e.is_signed_up).map((e: any) => e.id)));
       })
-      .catch(err => {
-        console.error("Failed to fetch events:", err);
+      .catch(() => {
         setEvents([]);
       })
       .finally(() => {
@@ -191,6 +189,54 @@ export default function Home() {
       });
   }, []);
 
+  async function handleConfirmSignup(event: any, isCancel = false) {
+    if (!event) return;
+    setIsSigningUp(true);
+    try {
+      const method = isCancel ? "DELETE" : "POST";
+      const res = await fetch(`/api/events/${event.id}/signup/`, { method });
+      
+      if (res.ok || res.status === 204) {
+        setSignedUpIds(prev => {
+          const next = new Set(prev);
+          isCancel ? next.delete(event.id) : next.add(event.id);
+          return next;
+        });
+        setEvents(prev => prev.map(e =>
+          e.id === event.id
+            ? { ...e, signups_count: e.signups_count + (isCancel ? -1 : 1) }
+            : e
+        ));
+        setIsSignupModalOpen(false);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.detail || "Une erreur est survenue");
+      }
+    } catch (err) {
+      alert("Une erreur est survenue");
+    } finally {
+      setIsSigningUp(false);
+    }
+  }
+
+  const handleFavorite = async (event: any) => {
+    if (!user) { setIsLoginModalOpen(true); return; }
+    const isFav = favoritedIds.has(event.id);
+    const method = isFav ? "DELETE" : "POST";
+    const res = await fetch(`/api/events/${event.id}/favorite/`, { method });
+    if (res.ok || res.status === 204) {
+      setFavoritedIds(prev => {
+        const next = new Set(prev);
+        isFav ? next.delete(event.id) : next.add(event.id);
+        return next;
+      });
+      setEvents(prev => prev.map(e => 
+        e.id === event.id 
+          ? { ...e, favorites_count: e.favorites_count + (isFav ? -1 : 1) }
+          : e
+      ));
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 font-sans selection:bg-yellow-500 selection:text-slate-900 text-slate-200">
@@ -211,7 +257,6 @@ export default function Home() {
         }}
       />
 
-      {/* Header / Navbar */}
       <header className="bg-slate-950/80 backdrop-blur-md text-white py-4 px-4 md:px-8 lg:px-12 flex flex-wrap items-center justify-between gap-y-4 gap-x-6 sticky top-0 z-50 border-b border-slate-800 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
         <Link href="/" className="text-2xl font-bold tracking-tight hover:opacity-90 transition-opacity flex items-center">
           <Play className="w-5 h-5 mr-2 text-yellow-500 fill-yellow-500" />
@@ -259,7 +304,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero Section */}
       <section 
         className="relative h-[400px] md:h-[550px] bg-cover bg-center flex items-center overflow-hidden"
         style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=2059&auto=format&fit=crop")' }}
@@ -297,7 +341,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Quick Filters */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 mt-4 relative z-10 hidden sm:flex">
         <ul className="flex space-x-8 border-b border-slate-800 w-full mb-8">
           <li className="pb-4 border-b-2 border-yellow-500 text-white font-bold tracking-wide uppercase text-sm">À l'affiche étudiante</li>
@@ -306,7 +349,6 @@ export default function Home() {
         </ul>
       </div>
 
-      {/* Main Content Grid */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-8 md:py-12 relative z-0">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 md:mb-12 gap-4 sm:hidden">
           <div>
@@ -329,38 +371,29 @@ export default function Home() {
             </div>
           ) : (
             events.map((event) => {
-              const dateObj = new Date(event.starts_at);
-              const formattedDate = "Le " + dateObj.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
-              const isFav = favoritedIds.has(event.id);
-              
-              const handleFavClick = async () => {
+              const isSignedUp = signedUpIds.has(event.id);
+              const handleSignupClick = () => {
                 if (!user) { setIsLoginModalOpen(true); return; }
-                const method = isFav ? "DELETE" : "POST";
-                const res = await fetch(`/api/events/${event.id}/favorite`, { method });
-                if (res.ok || res.status === 204) {
-                  setFavoritedIds(prev => {
-                    const next = new Set(prev);
-                    isFav ? next.delete(event.id) : next.add(event.id);
-                    return next;
-                  });
+                if (isSignedUp) {
+                  handleConfirmSignup(event, true);
+                } else {
+                  setEventForSignup(event);
+                  setIsSignupModalOpen(true);
                 }
               };
               
               return (
                 <MovieCard 
                   key={event.id}
-                  title={event.movie_title || event.title}
-                  date={formattedDate}
-                  location={event.location}
-                  imageUrl={event.cover_image || "https://images.unsplash.com/photo-1478720568477-152d9b164e26?q=80&w=500&auto=format&fit=crop"}
-                  tag={event.association_name ? `Par ${event.association_name}` : undefined}
+                  event={event}
                   hasDetails={true}
                   favoritesCount={event.favorites_count}
                   commentsCount={event.comments_count}
-                  isFavorited={isFav}
-                  onFavoriteClick={handleFavClick}
+                  isFavorited={favoritedIds.has(event.id)}
+                  isSignedUp={isSignedUp}
+                  onFavoriteClick={() => handleFavorite(event)}
                   onDetailsClick={() => { setSelectedEvent(event); setIsDrawerOpen(true); }}
-                  onReserveClick={() => { setSelectedEvent(event); setIsDrawerOpen(true); }}
+                  onSignupClick={handleSignupClick}
                 />
               );
             })
@@ -368,7 +401,14 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Event Drawer */}
+      <ReservationModal 
+        isOpen={isSignupModalOpen}
+        onClose={() => setIsSignupModalOpen(false)}
+        event={eventForSignup}
+        isLoading={isSigningUp}
+        onConfirm={() => handleConfirmSignup(eventForSignup)}
+      />
+
       <EventDrawer
         event={selectedEvent}
         isOpen={isDrawerOpen}
@@ -377,7 +417,6 @@ export default function Home() {
         onLoginRequired={() => { setIsDrawerOpen(false); setIsLoginModalOpen(true); }}
       />
 
-      {/* Newsletter / CTA Section */}
       <section className="border-t border-slate-900 bg-slate-900/50 mt-12 py-16 lg:py-24">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <div className="inline-flex items-center justify-center p-4 bg-slate-800 rounded-2xl mb-6 shadow-inner">
@@ -398,7 +437,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="bg-slate-950 border-t border-slate-900 pt-16 pb-8">
         <div className="max-w-7xl mx-auto px-6 md:px-12 border-b border-slate-800 pb-12 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">

@@ -35,10 +35,17 @@ export function Sidebar({ user }: SidebarProps) {
             <span>Tableau de bord</span>
           </Link>
           
-          <a href="#" className="flex items-center space-x-3 text-gray-500 hover:bg-gray-50 hover:text-black px-4 py-3 rounded-xl font-medium transition-colors">
-            <Calendar className="w-5 h-5" />
-            <span>Mes réservations</span>
-          </a>
+          <Link 
+            href="/dashboard/reservations" 
+            className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-colors ${
+              isActive("/dashboard/reservations")
+                ? "bg-yellow-50 text-black font-bold border border-yellow-100"
+                : "text-gray-500 hover:bg-gray-50 hover:text-black font-medium"
+            }`}
+          >
+            <Calendar className={`w-5 h-5 ${isActive("/dashboard/reservations") ? "text-[#facc15]" : ""}`} />
+            <span>Mes inscriptions</span>
+          </Link>
           
           <Link
             href="/dashboard/favorites"

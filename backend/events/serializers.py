@@ -18,9 +18,11 @@ class EventSerializer(serializers.ModelSerializer):
         required=False,
     )
     association_name = serializers.CharField(source="association.name", read_only=True)
-    favorites_count = serializers.IntegerField(read_only=True)
-    comments_count = serializers.IntegerField(read_only=True)
-    signups_count = serializers.IntegerField(read_only=True)
+    favorites_count = serializers.IntegerField(read_only=True, default=0)
+    comments_count = serializers.IntegerField(read_only=True, default=0)
+    signups_count = serializers.IntegerField(read_only=True, default=0)
+    is_favorited = serializers.BooleanField(read_only=True, default=False)
+    is_signed_up = serializers.BooleanField(read_only=True, default=False)
 
     class Meta:
         model = Event
@@ -44,6 +46,8 @@ class EventSerializer(serializers.ModelSerializer):
             "favorites_count",
             "comments_count",
             "signups_count",
+            "is_favorited",
+            "is_signed_up",
             "created_at",
             "updated_at",
         ]
