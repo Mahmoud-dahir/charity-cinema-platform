@@ -4,7 +4,10 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import NewEventPage from '../dashboard/events/new/page';
 
 const mockPush = jest.fn();
-jest.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush, replace: jest.fn() }) }));
+jest.mock('next/navigation', () => ({
+  usePathname: jest.fn(() => '/dashboard/events/new'),
+  useRouter: () => ({ push: mockPush, replace: jest.fn() })
+}));
 jest.mock('../../components/dashboard/Header', () => ({ Header: () => <div>Header</div> }));
 
 describe('New Event Page', () => {
